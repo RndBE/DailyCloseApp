@@ -6,7 +6,7 @@ Repo: https://github.com/vian1/DailyApp
 
 ## Tech Stack
 
-- **Backend**: Laravel 11 (PHP 8.2+)
+- **Backend**: Laravel 12 (PHP 8.2+)
 - **Database**: MySQL 8 / MariaDB
 - **Frontend**: Blade templates + Bootstrap 5 (light theme via CDN, Bootstrap Icons, Inter font)
 - **Auth**: Laravel Auth bawaan (session-based)
