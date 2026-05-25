@@ -1,0 +1,21 @@
+# Runtime files (PID lockfiles dari start.bat)
+.server.pid
+.pma.pid
+
+# Composer binary di-download di root saat setup awal — jangan ditrack
+/composer
+/composer.phar
+
+# OS junk
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Backup
+*.bak
+*.orig
