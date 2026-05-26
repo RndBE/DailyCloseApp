@@ -15,12 +15,20 @@ Repo: https://github.com/vian1/DailyApp
 ## Struktur Folder
 
 ```
-DailyApp/
-├── daily-closing/          ← Laravel project root
-│   ├── app/
-│   ├── database/
-│   ├── resources/views/
-│   └── routes/
+DailyApp/                   ← repo root + Laravel project root
+├── app/
+├── bootstrap/
+├── config/
+├── database/
+├── public/
+├── resources/views/
+├── routes/
+├── storage/
+├── tests/
+├── vendor/                 ← (gitignored)
+├── artisan
+├── composer.json
+├── pint.json
 ├── start.bat               ← Start MySQL + Laravel + phpMyAdmin
 ├── stop.bat                ← Stop semua service
 ├── status.bat              ← Cek status service
@@ -48,11 +56,10 @@ git clone git@github.com:vian1/DailyApp.git
 cd DailyApp
 
 # 2. Install dependencies Laravel
-cd daily-closing
-C:\xampp\php\php.exe ..\composer install
-# Catatan: kalau composer belum ada di root, download dulu:
+C:\xampp\php\php.exe composer install
+# Catatan: kalau composer belum ada, download dulu:
 #   C:\xampp\php\php.exe -r "copy('https://getcomposer.org/installer','c.php');"
-#   C:\xampp\php\php.exe c.php --install-dir=.. --filename=composer
+#   C:\xampp\php\php.exe c.php --install-dir=. --filename=composer
 #   del c.php
 
 # 3. Setup environment
@@ -70,8 +77,7 @@ C:\xampp\mysql\bin\mysql.exe -u root -e "CREATE DATABASE daily_closing CHARACTER
 # 6. Jalankan migrasi + seeder
 C:\xampp\php\php.exe artisan migrate:fresh --seed
 
-# 7. Balik ke root, jalankan app
-cd ..
+# 7. Jalankan app
 .\start.bat
 ```
 
@@ -138,12 +144,12 @@ Direktur, Komisaris, Marketing, RnD, Software, Admin Project, Engineer, Tax Offi
 **Jabatan** (dropdown tetap):
 Direktur, Komisaris, Manager, Leader, Staff
 
-Untuk menambah/ubah opsi, edit konstanta `User::DIVISIONS` atau `User::POSITIONS` di [daily-closing/app/Models/User.php](daily-closing/app/Models/User.php).
+Untuk menambah/ubah opsi, edit konstanta `User::DIVISIONS` atau `User::POSITIONS` di [app/Models/User.php](app/Models/User.php).
 
 ## Perintah Artisan yang Sering Dipakai
 
 ```powershell
-# Dari folder daily-closing/
+# Dari root repo
 C:\xampp\php\php.exe artisan migrate:fresh --seed     # reset DB + seed ulang
 C:\xampp\php\php.exe artisan migrate                   # apply migration baru saja
 C:\xampp\php\php.exe artisan db:seed                   # re-run seeder tanpa reset
@@ -164,10 +170,9 @@ git push
 
 File yang **tidak akan masuk Git** (sudah di-ignore):
 
-- `daily-closing/.env` — kredensial DB lokal
-- `daily-closing/vendor/` — dependencies Composer
-- `daily-closing/node_modules/` — dependencies NPM
-- `daily-closing/storage/logs/*.log` — log Laravel
+- `.env` — kredensial DB lokal
+- `vendor/` — dependencies Composer
+- `storage/logs/*.log` — log Laravel
 - `.server.pid`, `.pma.pid` — PID file runtime
 - `composer` / `composer.phar` — binary composer lokal
 
@@ -181,10 +186,10 @@ File yang **tidak akan masuk Git** (sudah di-ignore):
 - Cek port 3306: `Get-NetTCPConnection -LocalPort 3306`.
 
 **Laravel error "Class 'X' not found"?**
-- Jalankan `composer dump-autoload` di `daily-closing/`.
+- Jalankan `composer dump-autoload` di root repo.
 
 **Form validasi rejected tapi pesan tidak jelas?**
-- Cek `daily-closing/storage/logs/laravel.log`.
+- Cek `storage/logs/laravel.log`.
 
 ## Lisensi & Penulis
 
