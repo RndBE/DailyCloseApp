@@ -6,7 +6,7 @@
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
     <div>
         <h2 class="h4 fw-bold mb-1"><i class="bi bi-people text-primary me-2"></i>Manajemen User</h2>
-        <p class="text-muted mb-0 small">Kelola data user, level akses, divisi, dan status aktif.</p>
+        <p class="text-muted mb-0 small">Kelola data user, level akses, divisi, dan status aktif. User tidak dihapus permanen agar riwayat laporan tetap aman.</p>
     </div>
     <a href="{{ route('users.create') }}" class="btn btn-primary">
         <i class="bi bi-person-plus me-1"></i> Tambah User
@@ -74,7 +74,7 @@
                         <td class="small">
                             <div>{{ $u->division ?? '—' }}</div>
                             <div class="text-muted">{{ $u->position ?? '—' }}</div>
-                            @if($u->level === \App\Models\User::LEVEL_MANAGER && !empty($u->managed_divisions))
+                            @if(in_array($u->level, [\App\Models\User::LEVEL_MANAGER, \App\Models\User::LEVEL_LEADER], true) && !empty($u->managed_divisions))
                                 <div class="mt-1 d-flex flex-wrap gap-1">
                                     @foreach($u->managed_divisions as $md)
                                         <span class="badge-soft bg-soft-primary" style="font-size:.7rem; padding:.15rem .45rem"><i class="bi bi-diagram-3"></i> {{ $md }}</span>
@@ -97,8 +97,10 @@
                                 <form action="{{ route('users.destroy', $u) }}" method="POST"
                                       onsubmit="return confirm('Nonaktifkan user {{ $u->name }}?');" class="d-inline">
                                     @csrf @method('DELETE')
-                                    <button class="btn btn-sm btn-soft-danger" title="Nonaktifkan"><i class="bi bi-power"></i></button>
+                                    <button class="btn btn-sm btn-soft-danger" title="Nonaktifkan"><i class="bi bi-power me-1"></i>Nonaktifkan</button>
                                 </form>
+                            @elseif($u->id !== auth()->id())
+                                <span class="text-muted small">Sudah nonaktif</span>
                             @endif
                         </td>
                     </tr>

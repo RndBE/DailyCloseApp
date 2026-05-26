@@ -33,6 +33,7 @@ class User extends Authenticatable
         'Marketing',
         'RnD',
         'Software',
+        'Admin',
         'Admin Project',
         'Engineer',
         'Tax Officer',

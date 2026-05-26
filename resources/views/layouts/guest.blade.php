@@ -38,6 +38,21 @@
             background: #fff; border: 1px solid var(--line); border-radius: 16px;
             padding: 2rem; box-shadow: 0 10px 30px rgba(15,23,42,.05);
         }
+        .login-logo-wrap {
+            width: min(255px, 72vw);
+            height: 64px;
+            margin: 0 auto .85rem;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-logo {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
         .brand-mark {
             width: 52px; height: 52px; border-radius: 14px;
             background: linear-gradient(135deg, var(--brand-500), var(--brand-700));

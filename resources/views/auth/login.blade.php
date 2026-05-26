@@ -5,7 +5,14 @@
 @section('content')
 <div class="auth-card">
     <div class="text-center mb-4">
-        <div class="brand-mark mx-auto mb-3"><i class="bi bi-clipboard2-check"></i></div>
+        @php
+            $logoFile = file_exists(public_path('images/app-logo.png'))
+                ? 'images/app-logo.png'
+                : 'images/app-logo.svg';
+        @endphp
+        <div class="login-logo-wrap">
+            <img src="{{ asset($logoFile) }}" alt="Logo aplikasi" class="login-logo">
+        </div>
         <h1 class="h4 fw-bold mb-1">Daily Closing System</h1>
         <p class="text-muted small mb-0">Masuk untuk mengelola laporan pekerjaan harian Anda.</p>
     </div>

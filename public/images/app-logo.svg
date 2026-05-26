@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160" role="img" aria-labelledby="title">
+    <title id="title">App logo</title>
+    <rect width="640" height="160" fill="#000"/>
+    <path d="M0 0h30v73c0 17 14 31 31 31h207c8 0 14-6 14-13s-6-13-14-13H84c-13 0-24-11-24-24s11-24 24-24h184c42 0 76 34 76 76s-34 76-76 76H58c-32 0-58-26-58-58Z" fill="#ff0b0b"/>
+</svg>

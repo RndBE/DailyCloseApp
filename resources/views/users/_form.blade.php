@@ -14,6 +14,76 @@
     if (! is_array($managedSelected)) $managedSelected = [];
 @endphp
 
+@push('styles')
+<style>
+    .access-option-panel {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: .85rem .95rem;
+        transition: border-color .15s, box-shadow .15s, background .15s;
+    }
+
+    .access-option-panel:has(.form-check-input:checked) {
+        background: var(--brand-50);
+        border-color: rgba(59, 108, 246, .35);
+        box-shadow: 0 8px 20px rgba(59, 108, 246, .08);
+    }
+
+    .managed-division-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: .65rem;
+    }
+
+    .managed-division-option {
+        min-height: 54px;
+        display: flex;
+        align-items: center;
+        gap: .7rem;
+        padding: .75rem .85rem;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: transform .15s, border-color .15s, box-shadow .15s, background .15s;
+    }
+
+    .managed-division-option:hover {
+        border-color: var(--ink-300);
+        box-shadow: 0 6px 16px rgba(15, 23, 42, .06);
+        transform: translateY(-1px);
+    }
+
+    .managed-division-option:has(.managed-div-check:checked) {
+        background: var(--brand-50);
+        border-color: rgba(59, 108, 246, .45);
+        box-shadow: inset 0 0 0 1px rgba(59, 108, 246, .08);
+    }
+
+    .managed-division-option .form-check-input {
+        width: 1.05rem;
+        height: 1.05rem;
+        margin: 0;
+        flex: 0 0 auto;
+    }
+
+    .managed-division-title {
+        color: var(--ink-700);
+        font-size: .88rem;
+        font-weight: 600;
+        line-height: 1.25;
+    }
+
+    .managed-division-count {
+        background: var(--bg-soft);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: .35rem .65rem;
+    }
+</style>
+@endpush
+
 <div class="card mb-3">
     <div class="card-header"><i class="bi bi-person me-2 text-muted"></i>Data User</div>
     <div class="card-body">
@@ -54,9 +124,9 @@
             </div>
             <div class="col-md-6">
                 <label class="form-label">Peran Super Admin</label>
-                <div class="p-3" style="background:var(--bg-soft);border-radius:10px;border:1px solid var(--line)">
+                <div class="access-option-panel">
                     <input type="hidden" name="is_super_admin" value="0">
-                    <div class="form-check form-switch">
+                    <div class="form-check form-switch mb-0">
                         <input class="form-check-input" type="checkbox" role="switch"
                                id="is_super_admin" name="is_super_admin" value="1"
                                @checked(old('is_super_admin', $user->is_super_admin))>
@@ -116,26 +186,22 @@
             User hanya akan melihat laporan dari divisi yang dicentang. Jika dikosongkan, otomatis pakai divisi user itu sendiri.
         </p>
 
-        <div class="row g-2">
+        <div class="managed-division-grid">
             @foreach(\App\Models\User::DIVISIONS as $d)
-                <div class="col-md-4 col-sm-6">
-                    <div class="form-check p-2" style="background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;">
-                        <input class="form-check-input managed-div-check" type="checkbox"
-                               name="managed_divisions[]" value="{{ $d }}"
-                               id="md-{{ \Illuminate\Support\Str::slug($d) }}"
-                               @checked(in_array($d, $managedSelected, true))>
-                        <label class="form-check-label small" for="md-{{ \Illuminate\Support\Str::slug($d) }}">
-                            {{ $d }}
-                        </label>
-                    </div>
-                </div>
+                <label class="managed-division-option" for="md-{{ \Illuminate\Support\Str::slug($d) }}">
+                    <input class="form-check-input managed-div-check" type="checkbox"
+                           name="managed_divisions[]" value="{{ $d }}"
+                           id="md-{{ \Illuminate\Support\Str::slug($d) }}"
+                           @checked(in_array($d, $managedSelected, true))>
+                    <span class="managed-division-title">{{ $d }}</span>
+                </label>
             @endforeach
         </div>
 
-        <div class="mt-3 d-flex gap-2">
+        <div class="mt-3 d-flex flex-wrap align-items-center gap-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" id="md-select-all"><i class="bi bi-check-all me-1"></i>Pilih semua</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" id="md-clear-all"><i class="bi bi-x-lg me-1"></i>Kosongkan</button>
-            <span class="ms-auto text-muted small align-self-center"><span id="md-count">0</span> divisi dipilih</span>
+            <span class="managed-division-count ms-sm-auto text-muted small"><span id="md-count">0</span> divisi dipilih</span>
         </div>
     </div>
 </div>
