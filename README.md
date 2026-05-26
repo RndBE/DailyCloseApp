@@ -2,7 +2,6 @@
 
 Sistem berbasis web untuk mencatat, mengelola, dan memantau laporan pekerjaan harian karyawan berdasarkan struktur level user dan divisi.
 
-Repo: https://github.com/vian1/DailyApp
 
 ## Tech Stack
 
