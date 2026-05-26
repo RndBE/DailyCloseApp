@@ -163,6 +163,13 @@
                                     <a href="{{ route('daily-reports.edit', $r) }}" class="btn btn-sm btn-outline-secondary" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
+                                    <form action="{{ route('daily-reports.destroy', $r) }}" method="POST"
+                                          onsubmit="return confirm('Hapus laporan tanggal {{ $r->report_date->translatedFormat('d M Y') }}?');" class="d-inline">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-sm btn-soft-danger" title="Hapus">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
                                 @endif
                             </td>
                         </tr>

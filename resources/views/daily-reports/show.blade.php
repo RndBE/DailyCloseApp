@@ -17,9 +17,9 @@
                 <i class="bi bi-pencil me-1"></i> Edit
             </a>
             <form action="{{ route('daily-reports.destroy', $report) }}" method="POST"
-                  onsubmit="return confirm('Hapus laporan ini?');" class="d-inline">
+                  onsubmit="return confirm('Hapus laporan tanggal {{ $report->report_date->translatedFormat('d M Y') }}?');" class="d-inline">
                 @csrf @method('DELETE')
-                <button class="btn btn-soft-danger"><i class="bi bi-trash"></i></button>
+                <button class="btn btn-soft-danger"><i class="bi bi-trash me-1"></i> Hapus</button>
             </form>
         @endif
     </div>
