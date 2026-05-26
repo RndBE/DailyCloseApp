@@ -53,9 +53,16 @@
             font-weight: 700; font-size: 1.05rem; color: var(--ink-900);
         }
         .sidebar .brand .logo {
-            width: 36px; height: 36px; border-radius: 10px;
-            background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
-            color: #fff; display: grid; place-items: center; font-size: 1.05rem;
+            width: 38px; height: 38px; border-radius: 10px;
+            background: #fff;
+            border: 1px solid var(--line);
+            display: flex; align-items: center; justify-content: center;
+            padding: .25rem;
+            overflow: hidden;
+        }
+        .sidebar .brand .logo img {
+            width: 100%; height: 100%;
+            object-fit: contain;
         }
         .nav-section { padding: 1rem .75rem; }
         .nav-title {
@@ -202,7 +209,9 @@
         @auth
         <aside class="sidebar" id="sidebar">
             <div class="brand">
-                <div class="logo"><i class="bi bi-clipboard2-check"></i></div>
+                <div class="logo">
+                    <img src="{{ asset('images/app-logo.png') }}" alt="Beacon Engineering">
+                </div>
                 <div>
                     <div>Daily Closing</div>
                     <small class="text-muted fw-normal" style="font-size:.72rem">Pelaporan Harian</small>
