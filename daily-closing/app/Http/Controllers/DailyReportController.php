@@ -5,16 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DailyReportRequest;
 use App\Models\DailyReport;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 
 class DailyReportController extends Controller
 {
     /**
-     * "Laporan Tim" — laporan dari user di bawah level user yang login.
-     * Staff (yang tidak punya bawahan) di-redirect ke halaman "Laporan Saya".
+     * "Laporan Tim" — menampilkan semua anggota tim yang dikelola user untuk
+     * tanggal tertentu (default: hari ini). Anggota yang belum mengirim
+     * laporan tetap tampil dengan penanda "Belum Kirim".
      */
     public function index(Request $request)
     {
@@ -24,26 +27,115 @@ class DailyReportController extends Controller
             return redirect()->route('daily-reports.mine');
         }
 
-        $query = DailyReport::query()
-            ->with('user')
-            ->visibleTo($user)
-            ->where('user_id', '!=', $user->id);
+        try {
+            $date = $request->filled('date')
+                ? Carbon::parse($request->input('date'))->toDateString()
+                : now()->toDateString();
+        } catch (\Throwable $e) {
+            $date = now()->toDateString();
+        }
 
-        $this->applyFilters($query, $request, includeUserFilters: true);
+        $teamQuery = $this->teamMembersQuery($user);
 
-        $reports = $query->latest('report_date')->latest('id')->paginate(15)->withQueryString();
+        if ($request->filled('name')) {
+            $name = $request->string('name');
+            $teamQuery->where('name', 'like', "%{$name}%");
+        }
+        if ($request->filled('division')) {
+            $division = $request->string('division');
+            $teamQuery->where('division', 'like', "%{$division}%");
+        }
 
-        $divisions = User::query()
-            ->whereNotNull('division')
-            ->distinct()
+        $teamQuery->with(['dailyReports' => function ($q) use ($date) {
+            $q->whereDate('report_date', $date);
+        }]);
+
+        $members = $teamQuery
+            ->orderBy('level')
             ->orderBy('division')
-            ->pluck('division');
+            ->orderBy('name')
+            ->get();
+
+        $rows = $members->map(fn ($member) => (object) [
+            'user'   => $member,
+            'report' => $member->dailyReports->first(),
+        ])->values();
+
+        $perPage = 15;
+        $page    = max(1, (int) $request->input('page', 1));
+        $rowsPaginated = new LengthAwarePaginator(
+            $rows->forPage($page, $perPage)->values(),
+            $rows->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $visibleDivisions = $user->visibleDivisions();
+        $divisions = $visibleDivisions === null
+            ? collect(User::DIVISIONS)
+            : collect($visibleDivisions);
+
+        $summary = [
+            'total'    => $rows->count(),
+            'submitted' => $rows->filter(fn ($r) => (bool) $r->report)->count(),
+            'missing'  => $rows->filter(fn ($r) => ! $r->report)->count(),
+        ];
 
         return view('daily-reports.index', [
-            'reports'   => $reports,
-            'divisions' => $divisions,
-            'scope'     => 'team',
+            'rows'         => $rowsPaginated,
+            'divisions'    => $divisions,
+            'scope'        => 'team',
+            'selectedDate' => $date,
+            'summary'      => $summary,
         ]);
+    }
+
+    /**
+     * Query users yang dikelola oleh user yang login (sebagai "tim").
+     * Mengikuti aturan yang sama dengan DailyReport::scopeVisibleTo.
+     */
+    private function teamMembersQuery(User $user): Builder
+    {
+        $query = User::query()
+            ->where('is_active', true)
+            ->where('id', '!=', $user->id);
+
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+
+        if ($user->level === User::LEVEL_OWNER) {
+            return $query->whereIn('level', [
+                User::LEVEL_MANAGER,
+                User::LEVEL_LEADER,
+                User::LEVEL_STAFF,
+            ]);
+        }
+
+        if ($user->level === User::LEVEL_MANAGER) {
+            $divisions = $user->visibleDivisions() ?? [];
+            $query->whereIn('level', [User::LEVEL_LEADER, User::LEVEL_STAFF]);
+            if (empty($divisions)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereIn('division', $divisions);
+            }
+            return $query;
+        }
+
+        if ($user->level === User::LEVEL_LEADER) {
+            $divisions = $user->visibleDivisions() ?? [];
+            $query->where('level', User::LEVEL_STAFF);
+            if (empty($divisions)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereIn('division', $divisions);
+            }
+            return $query;
+        }
+
+        return $query->whereRaw('1 = 0');
     }
 
     /**

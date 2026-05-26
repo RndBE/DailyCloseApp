@@ -112,8 +112,7 @@ class User extends Authenticatable
      * Daftar divisi yang relevan untuk filter visibility laporan.
      *
      * - Super Admin / Owner    : null  (tidak difilter berdasarkan divisi)
-     * - Manager                : managed_divisions (fallback ke [division] jika kosong)
-     * - Leader                 : [division] (divisi sendiri)
+     * - Manager / Leader       : managed_divisions (fallback ke [division] jika kosong)
      * - Staff                  : tidak relevan (filter pakai user_id)
      *
      * @return array<int,string>|null  Null artinya "tidak ada filter divisi"
@@ -124,15 +123,11 @@ class User extends Authenticatable
             return null;
         }
 
-        if ($this->level === self::LEVEL_MANAGER) {
+        if (in_array($this->level, [self::LEVEL_MANAGER, self::LEVEL_LEADER], true)) {
             $managed = array_filter((array) $this->managed_divisions, fn ($d) => filled($d));
             if (! empty($managed)) {
                 return array_values($managed);
             }
-            return $this->division ? [$this->division] : [];
-        }
-
-        if ($this->level === self::LEVEL_LEADER) {
             return $this->division ? [$this->division] : [];
         }
 

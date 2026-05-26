@@ -16,6 +16,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'active'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    Route::get('/password',  [AuthController::class, 'editPassword'])->name('password.edit');
+    Route::put('/password',  [AuthController::class, 'updatePassword'])->name('password.update');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('daily-reports/mine', [DailyReportController::class, 'mine'])->name('daily-reports.mine');

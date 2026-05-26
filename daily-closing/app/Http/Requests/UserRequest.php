@@ -22,10 +22,16 @@ class UserRequest extends FormRequest
             $managed = null;
         }
 
+        $supportsManaged = in_array(
+            $this->integer('level'),
+            [\App\Models\User::LEVEL_MANAGER, \App\Models\User::LEVEL_LEADER],
+            true
+        );
+
         $this->merge([
             'is_active'         => $this->boolean('is_active'),
             'is_super_admin'    => $this->boolean('is_super_admin'),
-            'managed_divisions' => $this->integer('level') === \App\Models\User::LEVEL_MANAGER ? $managed : null,
+            'managed_divisions' => $supportsManaged ? $managed : null,
         ]);
     }
 

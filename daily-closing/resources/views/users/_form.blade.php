@@ -109,11 +109,11 @@
 </div>
 
 <div class="card mb-3" id="managed-divisions-card" style="display:none;">
-    <div class="card-header"><i class="bi bi-diagram-3 me-2 text-muted"></i>Divisi yang Dibawahi <span class="text-muted small fw-normal">(khusus Manager)</span></div>
+    <div class="card-header"><i class="bi bi-diagram-3 me-2 text-muted"></i>Divisi yang Dibawahi <span class="text-muted small fw-normal">(Manager & Leader)</span></div>
     <div class="card-body">
         <p class="text-muted small mb-3">
-            Manager dapat membawahi <strong>beberapa divisi</strong>. Centang divisi-divisi yang dia bawahi.
-            Manager hanya akan melihat laporan dari divisi yang dicentang.
+            Manager / Leader dapat membawahi <strong>beberapa divisi</strong>. Centang divisi-divisi yang dia bawahi.
+            User hanya akan melihat laporan dari divisi yang dicentang. Jika dikosongkan, otomatis pakai divisi user itu sendiri.
         </p>
 
         <div class="row g-2">
@@ -152,14 +152,14 @@
     const managedCard = document.getElementById('managed-divisions-card');
     const checks      = document.querySelectorAll('.managed-div-check');
     const countEl     = document.getElementById('md-count');
-    const MANAGER_LEVEL = {{ \App\Models\User::LEVEL_MANAGER }};
+    const MANAGED_LEVELS = [{{ \App\Models\User::LEVEL_MANAGER }}, {{ \App\Models\User::LEVEL_LEADER }}];
 
     function updateCount() {
         const n = Array.from(checks).filter(c => c.checked).length;
         countEl.textContent = n;
     }
     function toggleCard() {
-        const show = parseInt(levelSelect.value, 10) === MANAGER_LEVEL;
+        const show = MANAGED_LEVELS.includes(parseInt(levelSelect.value, 10));
         managedCard.style.display = show ? '' : 'none';
     }
 

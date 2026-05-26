@@ -280,6 +280,12 @@
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
+                                <a href="{{ route('password.edit') }}" class="dropdown-item">
+                                    <i class="bi bi-shield-lock me-2"></i>Ubah Password
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
                                     <button type="submit" class="dropdown-item text-danger">
