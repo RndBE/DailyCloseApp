@@ -12,11 +12,12 @@
 
     <style>
         :root {
-            --brand-50:  #eef4ff;
-            --brand-100: #dbe7ff;
-            --brand-500: #3b6cf6;
-            --brand-600: #2f59d8;
-            --brand-700: #2848b3;
+            --brand-50:  #fff1f1;
+            --brand-100: #ffe1e1;
+            --brand-500: #ef4444;
+            --brand-600: #dc2626;
+            --brand-700: #b91c1c;
+            --brand-rgb: 220, 38, 38;
             --ink-900:   #0f172a;
             --ink-700:   #334155;
             --ink-500:   #64748b;
@@ -27,8 +28,8 @@
             font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
             background:
-                radial-gradient(1200px 600px at -10% -10%, rgba(59,108,246,.10), transparent 60%),
-                radial-gradient(800px 500px at 110% 110%, rgba(47,89,216,.10), transparent 60%),
+                radial-gradient(1200px 600px at -10% -10%, rgba(var(--brand-rgb), .08), transparent 60%),
+                radial-gradient(800px 500px at 110% 110%, rgba(185, 28, 28, .07), transparent 60%),
                 var(--bg-soft);
             display: grid; place-items: center; padding: 1.5rem;
             color: var(--ink-900);
@@ -64,7 +65,15 @@
         }
         .form-control:focus {
             border-color: var(--brand-500);
-            box-shadow: 0 0 0 3px rgba(59, 108, 246, .15);
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .14);
+        }
+        .form-check-input:checked {
+            background-color: var(--brand-600);
+            border-color: var(--brand-600);
+        }
+        .form-check-input:focus {
+            border-color: var(--brand-500);
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .14);
         }
         .input-group-text { background: #fff; border-color: var(--line); border-radius: 10px 0 0 10px; }
         .input-group .form-control { border-radius: 0 10px 10px 0; }
@@ -72,7 +81,11 @@
             background: var(--brand-600); border-color: var(--brand-600);
             border-radius: 10px; padding: .6rem .95rem; font-weight: 600;
         }
-        .btn-primary:hover { background: var(--brand-700); border-color: var(--brand-700); }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+            background: var(--brand-700) !important;
+            border-color: var(--brand-700) !important;
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .14);
+        }
     </style>
 </head>
 <body>

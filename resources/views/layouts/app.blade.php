@@ -12,11 +12,12 @@
 
     <style>
         :root {
-            --brand-50:  #eef4ff;
-            --brand-100: #dbe7ff;
-            --brand-500: #3b6cf6;
-            --brand-600: #2f59d8;
-            --brand-700: #2848b3;
+            --brand-50:  #fff1f1;
+            --brand-100: #ffe1e1;
+            --brand-500: #ef4444;
+            --brand-600: #dc2626;
+            --brand-700: #b91c1c;
+            --brand-rgb: 220, 38, 38;
             --ink-900:   #0f172a;
             --ink-700:   #334155;
             --ink-500:   #64748b;
@@ -33,6 +34,7 @@
         }
         a { color: var(--brand-600); text-decoration: none; }
         a:hover { color: var(--brand-700); }
+        .text-primary { color: var(--brand-600) !important; }
 
         /* Sidebar */
         .app-shell { display: flex; min-height: 100vh; }
@@ -164,7 +166,15 @@
         }
         .form-control:focus, .form-select:focus {
             border-color: var(--brand-500);
-            box-shadow: 0 0 0 3px rgba(59, 108, 246, .15);
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .14);
+        }
+        .form-check-input:checked {
+            background-color: var(--brand-600);
+            border-color: var(--brand-600);
+        }
+        .form-check-input:focus {
+            border-color: var(--brand-500);
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .14);
         }
         .form-text { color: var(--ink-500); font-size: .8rem; }
         textarea.form-control { min-height: 96px; resize: vertical; }
@@ -172,18 +182,28 @@
         /* Buttons */
         .btn { border-radius: 10px; padding: .5rem .95rem; font-weight: 500; font-size: .9rem; }
         .btn-primary { background: var(--brand-600); border-color: var(--brand-600); }
-        .btn-primary:hover { background: var(--brand-700); border-color: var(--brand-700); }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+            background: var(--brand-700) !important;
+            border-color: var(--brand-700) !important;
+            box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .14);
+        }
         .btn-outline-secondary { color: var(--ink-700); border-color: var(--line); background: #fff; }
         .btn-outline-secondary:hover { background: var(--bg-soft); color: var(--ink-900); border-color: var(--ink-300); }
         .btn-soft-danger { background: #fdecec; color: #b02a37; border: 1px solid #f5c2c7; }
         .btn-soft-danger:hover { background: #f8d7da; color: #842029; }
+        .page-link { color: var(--brand-600); }
+        .active > .page-link,
+        .page-link.active {
+            background-color: var(--brand-600);
+            border-color: var(--brand-600);
+        }
 
         /* Login */
         .auth-shell {
             min-height: 100vh; display: grid; place-items: center;
             background:
-                radial-gradient(1200px 600px at -10% -10%, rgba(59,108,246,.10), transparent 60%),
-                radial-gradient(800px 500px at 110% 110%, rgba(47,89,216,.10), transparent 60%),
+                radial-gradient(1200px 600px at -10% -10%, rgba(var(--brand-rgb), .08), transparent 60%),
+                radial-gradient(800px 500px at 110% 110%, rgba(185, 28, 28, .07), transparent 60%),
                 var(--bg-soft);
             padding: 1.5rem;
         }

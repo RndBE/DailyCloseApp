@@ -26,8 +26,8 @@
 
     .access-option-panel:has(.form-check-input:checked) {
         background: var(--brand-50);
-        border-color: rgba(59, 108, 246, .35);
-        box-shadow: 0 8px 20px rgba(59, 108, 246, .08);
+        border-color: rgba(var(--brand-rgb), .32);
+        box-shadow: 0 8px 20px rgba(var(--brand-rgb), .08);
     }
 
     .managed-division-grid {
@@ -57,8 +57,8 @@
 
     .managed-division-option:has(.managed-div-check:checked) {
         background: var(--brand-50);
-        border-color: rgba(59, 108, 246, .45);
-        box-shadow: inset 0 0 0 1px rgba(59, 108, 246, .08);
+        border-color: rgba(var(--brand-rgb), .4);
+        box-shadow: inset 0 0 0 1px rgba(var(--brand-rgb), .08);
     }
 
     .managed-division-option .form-check-input {
