@@ -206,10 +206,20 @@ class DailyReportController extends Controller
             $data['leader_help_description'] = null;
         }
 
+        $user = $request->user();
+        if (in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true) && now()->hour >= 21) {
+            $data['is_late'] = true;
+        }
+
         $report = DailyReport::create($data);
 
+        $message = 'Laporan harian berhasil disimpan.';
+        if ($report->is_late) {
+            $message .= ' Laporan dikirim setelah pukul 21:00 — Anda mendapat sanksi keterlambatan.';
+        }
+
         return redirect()->route('daily-reports.show', $report)
-            ->with('success', 'Laporan harian berhasil disimpan.');
+            ->with($report->is_late ? 'warning' : 'success', $message);
     }
 
     public function show(Request $request, DailyReport $dailyReport): View

@@ -147,7 +147,10 @@
                             @if($report->need_leader_help)
                                 <span class="badge-soft bg-soft-danger"><i class="bi bi-life-preserver"></i> Butuh Bantuan</span>
                             @endif
-                            @if(! $report->overtime_status && ! $report->need_leader_help)
+                            @if($report->is_late)
+                                <span class="badge-soft bg-soft-danger"><i class="bi bi-exclamation-triangle"></i> Sanksi Terlambat</span>
+                            @endif
+                            @if(! $report->overtime_status && ! $report->need_leader_help && ! $report->is_late)
                                 <span class="badge-soft bg-soft-success"><i class="bi bi-check-circle"></i> Normal</span>
                             @endif
                         </div>

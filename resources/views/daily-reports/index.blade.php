@@ -132,6 +132,7 @@
                     <th>Lembur</th>
                     <th>Butuh Bantuan</th>
                     <th>Jam Selesai</th>
+                    <th>Sanksi</th>
                     <th class="text-end">Aksi</th>
                 </tr>
             </thead>
@@ -155,6 +156,13 @@
                                 @endif
                             </td>
                             <td class="small text-muted">{{ substr($r->work_finished_at, 0, 5) }}</td>
+                            <td>
+                                @if($r->is_late)
+                                    <span class="badge-soft bg-soft-danger"><i class="bi bi-exclamation-triangle"></i> Sanksi</span>
+                                @else
+                                    <span class="badge-soft bg-soft-success"><i class="bi bi-check-circle"></i> Tepat Waktu</span>
+                                @endif
+                            </td>
                             <td class="text-end">
                                 <a href="{{ route('daily-reports.show', $r) }}" class="btn btn-sm btn-outline-secondary" title="Lihat detail">
                                     <i class="bi bi-eye"></i>
@@ -230,6 +238,15 @@
                             </td>
                             <td class="small text-muted">
                                 {{ $report ? substr($report->work_finished_at, 0, 5) : '—' }}
+                            </td>
+                            <td>
+                                @if($report && $report->is_late)
+                                    <span class="badge-soft bg-soft-danger"><i class="bi bi-exclamation-triangle"></i> Sanksi</span>
+                                @elseif($report)
+                                    <span class="badge-soft bg-soft-success"><i class="bi bi-check-circle"></i> Tepat Waktu</span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
                             </td>
                             <td class="text-end">
                                 @if($report)

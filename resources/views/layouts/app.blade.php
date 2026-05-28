@@ -338,6 +338,12 @@
                 @if ($errors->any() && ! View::exists($errors->any() ? null : null))
                     {{-- Per-view error blocks handle field errors. Show a generic banner only for non-field errors. --}}
                 @endif
+                @if (session('warning'))
+                    <div class="alert border-0 d-flex align-items-center" role="alert" style="background:#fff5e6; color:#b15c00; border-radius:12px;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <div>{{ session('warning') }}</div>
+                    </div>
+                @endif
                 @if (session('error'))
                     <div class="alert alert-danger border-0" role="alert" style="background:#fdecec; color:#b02a37; border-radius:12px;">
                         <i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}

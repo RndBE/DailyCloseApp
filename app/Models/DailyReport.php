@@ -25,6 +25,7 @@ class DailyReport extends Model
         'tomorrow_plan',
         'work_finished_at',
         'additional_notes',
+        'is_late',
     ];
 
     protected function casts(): array
@@ -33,6 +34,7 @@ class DailyReport extends Model
             'report_date' => 'date',
             'overtime_status' => 'boolean',
             'need_leader_help' => 'boolean',
+            'is_late' => 'boolean',
         ];
     }
 
