@@ -140,6 +140,254 @@ class DailyReportController extends Controller
         return $query->whereRaw('1 = 0');
     }
 
+    public function rangkuman(Request $request): View
+    {
+        $user = $request->user();
+
+        abort_unless(
+            $user->isSuperAdmin() || in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER], true),
+            403,
+            'Anda tidak berhak mengakses halaman ini.'
+        );
+
+        try {
+            $date = $request->filled('date')
+                ? Carbon::parse($request->input('date'))->toDateString()
+                : now()->toDateString();
+        } catch (\Throwable $e) {
+            $date = now()->toDateString();
+        }
+
+        $members = $this->teamMembersQuery($user)
+            ->with(['dailyReports' => fn ($q) => $q->whereDate('report_date', $date)])
+            ->orderBy('division')
+            ->orderBy('level')
+            ->orderBy('name')
+            ->get();
+
+        $rows = $members->map(fn ($member) => (object) [
+            'user'   => $member,
+            'report' => $member->dailyReports->first(),
+        ]);
+
+        $byDivision = $rows->groupBy(fn ($row) => $row->user->division ?? 'Tanpa Divisi');
+
+        $totalStats = [
+            'total'     => $rows->count(),
+            'submitted' => $rows->filter(fn ($r) => $r->report)->count(),
+            'missing'   => $rows->filter(fn ($r) => ! $r->report)->count(),
+            'overtime'  => $rows->filter(fn ($r) => $r->report?->overtime_status)->count(),
+            'help'      => $rows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
+            'late'      => $rows->filter(fn ($r) => $r->report?->is_late)->count(),
+        ];
+
+        return view('daily-reports.rangkuman', [
+            'byDivision'   => $byDivision,
+            'totalStats'   => $totalStats,
+            'selectedDate' => $date,
+        ]);
+    }
+
+    public function rangkumanCetak(Request $request): View
+    {
+        $user = $request->user();
+
+        abort_unless(
+            $user->isSuperAdmin() || in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER], true),
+            403
+        );
+
+        try {
+            $date = $request->filled('date')
+                ? Carbon::parse($request->input('date'))->toDateString()
+                : now()->toDateString();
+        } catch (\Throwable $e) {
+            $date = now()->toDateString();
+        }
+
+        $members = $this->teamMembersQuery($user)
+            ->with(['dailyReports' => fn ($q) => $q->whereDate('report_date', $date)])
+            ->orderBy('division')
+            ->orderBy('level')
+            ->orderBy('name')
+            ->get();
+
+        $rows = $members->map(fn ($member) => (object) [
+            'user'   => $member,
+            'report' => $member->dailyReports->first(),
+        ]);
+
+        $byDivision = $rows->groupBy(fn ($row) => $row->user->division ?? 'Tanpa Divisi');
+
+        $totalStats = [
+            'total'     => $rows->count(),
+            'submitted' => $rows->filter(fn ($r) => $r->report)->count(),
+            'missing'   => $rows->filter(fn ($r) => ! $r->report)->count(),
+            'overtime'  => $rows->filter(fn ($r) => $r->report?->overtime_status)->count(),
+            'help'      => $rows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
+            'late'      => $rows->filter(fn ($r) => $r->report?->is_late)->count(),
+        ];
+
+        return view('daily-reports.rangkuman-cetak', [
+            'byDivision'   => $byDivision,
+            'totalStats'   => $totalStats,
+            'selectedDate' => $date,
+            'generatedBy'  => $user->name,
+        ]);
+    }
+
+    private function buildBulananData(Request $request): array
+    {
+        $user = $request->user();
+
+        $year  = (int) $request->input('year',  now()->year);
+        $month = (int) $request->input('month', now()->month);
+        $year  = max(2020, min((int) now()->year + 1, $year));
+        $month = max(1, min(12, $month));
+
+        $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $end   = $start->copy()->endOfMonth();
+        $totalDays = $start->daysInMonth;
+
+        // Ambil semua anggota yang visible
+        $isStaff = ! $user->isSuperAdmin() && $user->level === User::LEVEL_STAFF;
+        if ($isStaff) {
+            $members = collect([$user]);
+        } else {
+            $members = $this->teamMembersQuery($user)
+                ->orderBy('division')->orderBy('level')->orderBy('name')
+                ->get();
+            // Staff juga lihat laporan sendiri di atas
+            $members = collect([$user])->merge($members);
+        }
+
+        // Ambil semua laporan bulan ini untuk member-member tersebut
+        $memberIds = $members->pluck('id');
+        $reports = DailyReport::query()
+            ->whereIn('user_id', $memberIds)
+            ->whereBetween('report_date', [$start->toDateString(), $end->toDateString()])
+            ->with('user')
+            ->orderBy('report_date')
+            ->get()
+            ->groupBy('user_id');
+
+        // Susun data per user
+        $rows = $members->map(function ($member) use ($reports, $totalDays) {
+            $userReports = $reports->get($member->id, collect());
+            return (object) [
+                'user'        => $member,
+                'reports'     => $userReports,
+                'submitted'   => $userReports->count(),
+                'total_days'  => $totalDays,
+                'overtime'    => $userReports->where('overtime_status', true)->count(),
+                'need_help'   => $userReports->where('need_leader_help', true)->count(),
+                'late'        => $userReports->where('is_late', true)->count(),
+                'missing'     => $totalDays - $userReports->count(),
+            ];
+        });
+
+        $byDivision = $rows->groupBy(fn ($r) => $r->user->division ?? 'Tanpa Divisi');
+
+        $totalStats = [
+            'members'   => $rows->count(),
+            'submitted' => $rows->sum('submitted'),
+            'overtime'  => $rows->sum('overtime'),
+            'need_help' => $rows->sum('need_help'),
+            'late'      => $rows->sum('late'),
+        ];
+
+        return [
+            'byDivision'  => $byDivision,
+            'totalStats'  => $totalStats,
+            'year'        => $year,
+            'month'       => $month,
+            'monthLabel'  => $start->translatedFormat('F Y'),
+            'totalDays'   => $totalDays,
+            'generatedBy' => $user->name,
+        ];
+    }
+
+    public function laporanBulanan(Request $request): View
+    {
+        return view('daily-reports.laporan-bulanan', $this->buildBulananData($request));
+    }
+
+    public function laporanBulananCetak(Request $request): View
+    {
+        return view('daily-reports.laporan-bulanan-cetak', $this->buildBulananData($request));
+    }
+
+    public function laporanBulananDownload(Request $request)
+    {
+        $authUser = $request->user();
+        $userId   = (int) $request->input('user_id');
+        $year     = (int) $request->input('year',  now()->year);
+        $month    = (int) $request->input('month', now()->month);
+
+        $targetUser = User::findOrFail($userId);
+
+        $allowed = $authUser->isSuperAdmin()
+            || $authUser->id === $userId
+            || DailyReport::query()->visibleTo($authUser)->where('user_id', $userId)->exists();
+        abort_unless($allowed, 403);
+
+        $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $end   = $start->copy()->endOfMonth();
+
+        $reports = DailyReport::query()
+            ->where('user_id', $userId)
+            ->whereBetween('report_date', [$start->toDateString(), $end->toDateString()])
+            ->orderBy('report_date')
+            ->get();
+
+        $monthLabel = $start->translatedFormat('F_Y');
+        $safeName   = preg_replace('/[^A-Za-z0-9_\-]/', '_', $targetUser->name);
+        $filename   = "laporan_{$safeName}_{$monthLabel}.xlsx";
+
+        $xlsx = new \App\Support\SimpleXlsx();
+
+        $xlsx->addRow(['Nama',    $targetUser->name], true);
+        $xlsx->addRow(['Level',   $targetUser->level_name], true);
+        $xlsx->addRow(['Divisi',  $targetUser->division ?? '-'], true);
+        $xlsx->addRow(['Periode', $start->translatedFormat('F Y')], true);
+        $xlsx->addEmpty();
+        $xlsx->addRow([
+            'Tanggal',
+            'Pekerjaan Diselesaikan',
+            'Belum Selesai',
+            'Hambatan',
+            'Rencana Besok',
+            'Jam Selesai',
+            'Lembur',
+            'Jam Lembur Mulai',
+            'Jam Lembur Selesai',
+            'Butuh Bantuan',
+            'Keterangan Bantuan',
+            'Sanksi Terlambat',
+            'Catatan Tambahan',
+        ], true);
+
+        foreach ($reports as $r) {
+            $xlsx->addRow([
+                $r->report_date->translatedFormat('d F Y'),
+                $r->completed_work,
+                $r->unfinished_work ?? '',
+                $r->obstacles ?? '',
+                $r->tomorrow_plan,
+                substr($r->work_finished_at, 0, 5),
+                $r->overtime_status ? 'Ya' : 'Tidak',
+                $r->overtime_start ? substr($r->overtime_start, 0, 5) : '',
+                $r->overtime_end   ? substr($r->overtime_end, 0, 5)   : '',
+                $r->need_leader_help ? 'Ya' : 'Tidak',
+                $r->leader_help_description ?? '',
+                $r->is_late ? 'Ya' : 'Tidak',
+                $r->additional_notes ?? '',
+            ]);
+        }
+
+        return $xlsx->download($filename);
+    }
+
     /**
      * "Laporan Saya" — hanya laporan milik user yang login.
      */

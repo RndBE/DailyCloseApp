@@ -22,6 +22,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('daily-reports/mine', [DailyReportController::class, 'mine'])->name('daily-reports.mine');
+    Route::get('daily-reports/rangkuman', [DailyReportController::class, 'rangkuman'])->name('daily-reports.rangkuman');
+    Route::get('daily-reports/rangkuman/cetak', [DailyReportController::class, 'rangkumanCetak'])->name('daily-reports.rangkuman.cetak');
+    Route::get('daily-reports/laporan-bulanan', [DailyReportController::class, 'laporanBulanan'])->name('daily-reports.bulanan');
+    Route::get('daily-reports/laporan-bulanan/cetak', [DailyReportController::class, 'laporanBulananCetak'])->name('daily-reports.bulanan.cetak');
+    Route::get('daily-reports/laporan-bulanan/download', [DailyReportController::class, 'laporanBulananDownload'])->name('daily-reports.bulanan.download');
     Route::resource('daily-reports', DailyReportController::class);
 
     Route::middleware('manage.users')->group(function () {

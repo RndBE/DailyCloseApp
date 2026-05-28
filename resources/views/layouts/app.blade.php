@@ -213,6 +213,14 @@
             padding: 2rem; box-shadow: 0 10px 30px rgba(15,23,42,.05);
         }
 
+        /* Drag-scroll tables */
+        .table-responsive {
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .table-responsive.is-dragging { cursor: grabbing; }
+
         @media (max-width: 991px) {
             .sidebar { position: fixed; transform: translateX(-100%); transition: transform .2s; z-index: 1040; }
             .sidebar.show { transform: translateX(0); }
@@ -370,7 +378,30 @@
                 backdrop.classList.remove('show');
             });
         }
-    </script>
+
+        // Drag-to-scroll for all .table-responsive containers
+        document.querySelectorAll('.table-responsive').forEach(el => {
+            let isDown = false, startX = 0, scrollLeft = 0;
+
+            el.addEventListener('mousedown', e => {
+                if (e.button !== 0) return;
+                isDown = true;
+                startX = e.pageX - el.offsetLeft;
+                scrollLeft = el.scrollLeft;
+                el.classList.add('is-dragging');
+            });
+
+            el.addEventListener('mouseleave', () => { isDown = false; el.classList.remove('is-dragging'); });
+            el.addEventListener('mouseup',    () => { isDown = false; el.classList.remove('is-dragging'); });
+
+            el.addEventListener('mousemove', e => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - el.offsetLeft;
+                el.scrollLeft = scrollLeft - (x - startX);
+            });
+        });
+</script>
     @stack('scripts')
 </body>
 </html>
