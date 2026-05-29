@@ -273,6 +273,9 @@
                     <a href="{{ route('users.index') }}" class="nav-link-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
                         <i class="bi bi-people"></i> Manajemen User
                     </a>
+                    <a href="{{ route('work-schedule.index') }}" class="nav-link-item {{ request()->routeIs('work-schedule.*') ? 'active' : '' }}">
+                        <i class="bi bi-clock"></i> Jadwal Kerja
+                    </a>
                 @endif
             </nav>
             <div class="footer">

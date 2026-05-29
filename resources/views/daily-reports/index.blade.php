@@ -44,7 +44,7 @@
         <a href="{{ route('daily-reports.bulanan') }}" class="btn btn-outline-secondary">
             <i class="bi bi-calendar3 me-1"></i> Laporan Bulanan
         </a>
-        @if(!$isMine && ($isSuperAdmin || in_array($user->level, [1, 2])))
+        @if(!$isMine && ($isSuperAdmin || in_array($user->level, [1, 2, 3])))
             <a href="{{ route('daily-reports.rangkuman', ['date' => request('date', now()->toDateString())]) }}" class="btn btn-outline-primary">
                 <i class="bi bi-clipboard2-data me-1"></i> Rangkuman
             </a>

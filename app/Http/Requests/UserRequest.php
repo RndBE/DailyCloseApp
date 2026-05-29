@@ -54,7 +54,8 @@ class UserRequest extends FormRequest
             'managed_divisions' => ['nullable', 'array'],
             'managed_divisions.*' => [Rule::in(User::DIVISIONS)],
             'position' => ['nullable', Rule::in(User::POSITIONS)],
-            'is_active' => ['required', 'boolean'],
+            'is_active'     => ['required', 'boolean'],
+            'work_schedule' => ['nullable', Rule::in(array_keys(User::WORK_SCHEDULES))],
         ];
     }
 }

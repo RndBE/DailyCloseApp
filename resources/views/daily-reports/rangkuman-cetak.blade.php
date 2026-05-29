@@ -278,6 +278,130 @@
         <span>Total anggota: {{ $totalStats['total'] }} orang</span>
     </div>
 
+    {{-- Laporan Manager --}}
+    @if($managerRows->count() > 0)
+        @php
+            $splitM = function(string $text): array {
+                $result = [];
+                foreach (preg_split('/\r\n|\n|\r/', $text) as $line) {
+                    foreach (preg_split('/\s+-\s+/', $line) as $part) {
+                        $part = trim($part, " \t-•·");
+                        if ($part !== '') $result[] = $part;
+                    }
+                }
+                return $result ?: [trim($text)];
+            };
+        @endphp
+
+        <div style="margin-bottom:24px;">
+            <div style="font-size:13pt; font-weight:bold; border-bottom:2px solid #1e3a5f; padding-bottom:5px; margin-bottom:14px;">
+                Laporan Manager
+            </div>
+
+            @foreach($managerRows as $mRow)
+                @php $mr = $mRow->report; @endphp
+                <div style="margin-bottom:18px; page-break-inside:avoid; border:2px solid #4f46e5; border-radius:3px;">
+                    <div style="background:#4f46e5; color:#fff; padding:5px 10px; display:flex; justify-content:space-between; align-items:center; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+                        <span style="font-weight:bold;">{{ $mRow->user->name }}</span>
+                        <span style="font-size:9pt; opacity:.85;">{{ $mRow->user->division ?? 'Tanpa Divisi' }}</span>
+                    </div>
+                    <div style="padding:10px 14px;">
+                        @if(!$mr)
+                            <p style="color:#b15c00; font-style:italic; margin:0;">Belum mengirim laporan</p>
+                        @else
+                            @php $mn = 0; @endphp
+
+                            <div class="section">
+                                <div class="section-title">
+                                    <span class="section-num" style="background:#4f46e5;">{{ ++$mn }}</span>
+                                    Pekerjaan yang Diselesaikan
+                                </div>
+                                @if(trim($mr->completed_work))
+                                    <ul>@foreach($splitM(trim($mr->completed_work)) as $line)<li>{{ $line }}</li>@endforeach</ul>
+                                @else
+                                    <p class="empty-text">Tidak ada data.</p>
+                                @endif
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    <span class="section-num" style="background:#4f46e5;">{{ ++$mn }}</span>
+                                    Pekerjaan yang Belum Selesai
+                                </div>
+                                @if(trim($mr->unfinished_work ?? ''))
+                                    <ul>@foreach($splitM(trim($mr->unfinished_work)) as $line)<li>{{ $line }}</li>@endforeach</ul>
+                                @else
+                                    <p class="empty-text">Tidak ada pekerjaan yang tertunda.</p>
+                                @endif
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    <span class="section-num" style="background:#4f46e5;">{{ ++$mn }}</span>
+                                    Hambatan
+                                </div>
+                                @if(trim($mr->obstacles ?? ''))
+                                    <ul>@foreach($splitM(trim($mr->obstacles)) as $line)<li>{{ $line }}</li>@endforeach</ul>
+                                @else
+                                    <p class="empty-text">Tidak ada hambatan yang dilaporkan.</p>
+                                @endif
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    <span class="section-num" style="background:#4f46e5;">{{ ++$mn }}</span>
+                                    Rencana Kerja Hari Berikutnya
+                                </div>
+                                @if(trim($mr->tomorrow_plan))
+                                    <ul>@foreach($splitM(trim($mr->tomorrow_plan)) as $line)<li>{{ $line }}</li>@endforeach</ul>
+                                @else
+                                    <p class="empty-text">Tidak ada data.</p>
+                                @endif
+                            </div>
+
+                            @if(trim($mr->additional_notes ?? ''))
+                                <div class="section">
+                                    <div class="section-title">
+                                        <span class="section-num" style="background:#4f46e5;">{{ ++$mn }}</span>
+                                        Catatan Tambahan
+                                    </div>
+                                    <ul>@foreach($splitM(trim($mr->additional_notes)) as $line)<li>{{ $line }}</li>@endforeach</ul>
+                                </div>
+                            @endif
+
+                            <hr class="divider">
+
+                            <div class="bottom-row">
+                                <div class="bottom-box lembur">
+                                    <div class="box-title lembur-title">Lembur</div>
+                                    @if($mr->overtime_status)
+                                        <p style="margin:0">
+                                            {{ $mr->overtime_start ? substr($mr->overtime_start,0,5) : '-' }}
+                                            &mdash;
+                                            {{ $mr->overtime_end ? substr($mr->overtime_end,0,5) : '-' }}
+                                        </p>
+                                    @else
+                                        <p style="color:#777; font-style:italic; margin:0">Tidak lembur.</p>
+                                    @endif
+                                </div>
+                                <div class="bottom-box sanksi">
+                                    <div class="box-title sanksi-title">Keterlambatan Kirim</div>
+                                    @if($mr->is_late)
+                                        <p style="margin:0; color:#b02a37">
+                                            Kirim pukul {{ $mr->created_at->translatedFormat('H:i') }} WIB
+                                        </p>
+                                    @else
+                                        <p style="color:#777; font-style:italic; margin:0">Tepat waktu.</p>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    @endif
+
     {{-- Per Divisi --}}
     @forelse($byDivision as $division => $rows)
         @php

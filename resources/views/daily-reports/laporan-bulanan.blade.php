@@ -202,32 +202,66 @@ $splitCell = function(string $text): array {
                             </div>
                         </div>
 
-                        {{-- Tabel detail laporan --}}
-                        @if($row->reports->isEmpty())
-                            <div class="text-center text-muted py-5">
-                                <i class="bi bi-inbox display-5 d-block mb-2 opacity-50"></i>
-                                Tidak ada laporan di bulan {{ $monthLabel }}.
-                            </div>
-                        @else
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0" style="font-size:.88rem">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width:110px;min-width:110px">Tanggal</th>
-                                            <th style="min-width:320px">Pekerjaan Diselesaikan</th>
-                                            <th style="min-width:260px">Belum Selesai</th>
-                                            <th style="min-width:260px">Hambatan</th>
-                                            <th style="width:90px;min-width:90px">Jam Selesai</th>
-                                            <th style="width:120px;min-width:120px">Lembur</th>
-                                            <th style="width:80px;min-width:80px">Sanksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($row->reports as $r)
-                                            <tr>
-                                                <td class="fw-semibold small">
-                                                    {{ $r->report_date->translatedFormat('d M Y') }}
+                        {{-- Tabel detail laporan — full 1 bulan --}}
+                        @php
+                            $schedule    = $row->user->work_schedule ?? \App\Models\User::SCHEDULE_5DAYS;
+                            $holidayDays = $schedule === \App\Models\User::SCHEDULE_6DAYS ? [0] : [0, 6];
+                            $today       = \Carbon\Carbon::today();
+                            $reportsByDate = $row->reports->keyBy(fn($r) => $r->report_date->toDateString());
+                            $iter        = $startDate->copy();
+                        @endphp
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0" style="font-size:.85rem">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:130px;min-width:130px">Tanggal</th>
+                                        <th style="min-width:300px">Pekerjaan Diselesaikan</th>
+                                        <th style="min-width:240px">Belum Selesai</th>
+                                        <th style="min-width:240px">Hambatan</th>
+                                        <th style="width:90px;min-width:90px">Jam Selesai</th>
+                                        <th style="width:120px;min-width:120px">Lembur</th>
+                                        <th style="width:80px;min-width:80px">Sanksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @while($iter->lte($endDate))
+                                        @php
+                                            $dateStr   = $iter->toDateString();
+                                            $r         = $reportsByDate->get($dateStr);
+                                            $isHoliday = in_array($iter->dayOfWeek, $holidayDays, true);
+                                            $isFuture  = $iter->gt($today);
+                                        @endphp
+                                        @php
+                                            $trStyle = $isHoliday ? 'background:#fef2f2' : ($isFuture ? 'background:#fafafa' : '');
+                                            $dateColor = $isHoliday ? '#b02a37' : 'inherit';
+                                            $dayColor = $isHoliday ? '#b02a37' : '#64748b';
+                                        @endphp
+                                        <tr style="{{ $trStyle }}">
+                                            <td class="fw-semibold small" style="color:{{ $dateColor }}">
+                                                {{ $iter->translatedFormat('d M Y') }}
+                                                <div class="small fw-normal" style="font-size:.75rem; color:{{ $dayColor }}">
+                                                    {{ $iter->translatedFormat('l') }}
+                                                    @if($isHoliday) <i class="bi bi-calendar-x ms-1"></i> @endif
+                                                </div>
+                                                @if($isHoliday && $r)
+                                                    <span class="badge mt-1" style="background:#b02a37; color:#fff; font-size:.65rem; font-weight:600">
+                                                        <i class="bi bi-stopwatch me-1"></i>Lembur di hari libur
+                                                    </span>
+                                                @endif
+                                            </td>
+
+                                            @if($isHoliday && !$r)
+                                                <td colspan="6" class="text-center small fst-italic" style="color:#b02a37">
+                                                    <i class="bi bi-calendar-x me-1"></i>Libur
                                                 </td>
+                                            @elseif(!$r)
+                                                <td class="text-center text-muted small">—</td>
+                                                <td class="text-center text-muted small">—</td>
+                                                <td class="text-center text-muted small">—</td>
+                                                <td class="text-center text-muted small">—</td>
+                                                <td class="text-center text-muted small">—</td>
+                                                <td class="text-center text-muted small">—</td>
+                                            @else
                                                 <td class="small">
                                                     @php $lines = $splitCell($r->completed_work); @endphp
                                                     @if(count($lines) > 1)
@@ -285,12 +319,13 @@ $splitCell = function(string $text): array {
                                                         <span class="text-muted">—</span>
                                                     @endif
                                                 </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @endif
+                                            @endif
+                                        </tr>
+                                        @php $iter->addDay(); @endphp
+                                    @endwhile
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <a href="{{ route('daily-reports.bulanan.download', ['user_id' => $row->user->id, 'month' => $month, 'year' => $year]) }}"

@@ -49,6 +49,157 @@ $splitText = function(string $text): array {
     </div>
 </div>
 
+{{-- Laporan Manager --}}
+@if($managerRows->count() > 0)
+<div class="mb-4">
+    <h5 class="fw-bold mb-3">
+        <i class="bi bi-person-badge text-primary me-2"></i>Laporan Manager
+    </h5>
+    @foreach($managerRows as $mRow)
+        @php
+            $mr = $mRow->report;
+        @endphp
+        <div class="card mb-3">
+            <div class="card-header py-2 px-4 d-flex align-items-center justify-content-between"
+                 style="background:#eef2ff; border-bottom:2px solid #a5b4fc">
+                <span class="fw-bold">
+                    <i class="bi bi-person-circle me-2 text-primary"></i>{{ $mRow->user->name }}
+                </span>
+                <span class="text-muted small">{{ $mRow->user->division ?? 'Tanpa Divisi' }}</span>
+            </div>
+            <div class="card-body px-4 py-3">
+                @if(!$mr)
+                    <div class="p-3 rounded" style="background:#fff5e6; border-left:3px solid #f59e0b">
+                        <span style="color:#b15c00">
+                            <i class="bi bi-exclamation-circle me-1"></i>Belum mengirim laporan
+                        </span>
+                    </div>
+                @else
+                    @php $n = 0; @endphp
+
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                                  style="width:24px;height:24px;min-width:24px;background:#6366f1;font-size:.8rem">{{ ++$n }}</span>
+                            <span class="fw-semibold">Pekerjaan yang Diselesaikan</span>
+                        </div>
+                        @if(trim($mr->completed_work))
+                            <ul class="mb-0" style="padding-left:2rem; line-height:1.9">
+                                @foreach($splitText(trim($mr->completed_work)) as $line)
+                                    <li>{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-muted mb-0 ms-4"><em>Tidak ada data.</em></p>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                                  style="width:24px;height:24px;min-width:24px;background:#6366f1;font-size:.8rem">{{ ++$n }}</span>
+                            <span class="fw-semibold">Pekerjaan yang Belum Selesai</span>
+                        </div>
+                        @if(trim($mr->unfinished_work ?? ''))
+                            <ul class="mb-0" style="padding-left:2rem; line-height:1.9">
+                                @foreach($splitText(trim($mr->unfinished_work)) as $line)
+                                    <li>{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-muted mb-0 ms-4"><em>Tidak ada pekerjaan yang tertunda.</em></p>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                                  style="width:24px;height:24px;min-width:24px;background:#6366f1;font-size:.8rem">{{ ++$n }}</span>
+                            <span class="fw-semibold">Hambatan</span>
+                        </div>
+                        @if(trim($mr->obstacles ?? ''))
+                            <ul class="mb-0" style="padding-left:2rem; line-height:1.9">
+                                @foreach($splitText(trim($mr->obstacles)) as $line)
+                                    <li>{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-muted mb-0 ms-4"><em>Tidak ada hambatan yang dilaporkan.</em></p>
+                        @endif
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                                  style="width:24px;height:24px;min-width:24px;background:#6366f1;font-size:.8rem">{{ ++$n }}</span>
+                            <span class="fw-semibold">Rencana Kerja Hari Berikutnya</span>
+                        </div>
+                        @if(trim($mr->tomorrow_plan))
+                            <ul class="mb-0" style="padding-left:2rem; line-height:1.9">
+                                @foreach($splitText(trim($mr->tomorrow_plan)) as $line)
+                                    <li>{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="text-muted mb-0 ms-4"><em>Tidak ada data.</em></p>
+                        @endif
+                    </div>
+
+                    @if(trim($mr->additional_notes ?? ''))
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                                      style="width:24px;height:24px;min-width:24px;background:#6366f1;font-size:.8rem">{{ ++$n }}</span>
+                                <span class="fw-semibold">Catatan Tambahan</span>
+                            </div>
+                            <ul class="mb-0" style="padding-left:2rem; line-height:1.9">
+                                @foreach($splitText(trim($mr->additional_notes)) as $line)
+                                    <li>{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <div class="p-3 rounded h-100" style="background:#fff5e6; border-left:3px solid #f59e0b">
+                                <div class="fw-semibold mb-1 small" style="color:#b15c00">
+                                    <i class="bi bi-stopwatch me-1"></i>Lembur
+                                </div>
+                                @if($mr->overtime_status)
+                                    <span class="small">
+                                        {{ $mr->overtime_start ? substr($mr->overtime_start,0,5) : '-' }}
+                                        s/d
+                                        {{ $mr->overtime_end ? substr($mr->overtime_end,0,5) : '-' }}
+                                    </span>
+                                @else
+                                    <span class="small text-muted"><em>Tidak lembur.</em></span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded h-100" style="background:#fef2f2; border-left:3px solid #ef4444">
+                                <div class="fw-semibold mb-1 small" style="color:#b02a37">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Keterlambatan Kirim
+                                </div>
+                                @if($mr->is_late)
+                                    <span class="small" style="color:#b02a37">
+                                        Kirim pukul {{ $mr->created_at->translatedFormat('H:i') }} WIB
+                                    </span>
+                                @else
+                                    <span class="small text-muted"><em>Tepat waktu.</em></span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endforeach
+</div>
+<hr class="my-4">
+@endif
+
 {{-- Rangkuman Per Divisi --}}
 @forelse($byDivision as $division => $rows)
     @php

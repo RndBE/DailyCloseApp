@@ -19,6 +19,30 @@ class User extends Authenticatable
 
     public const LEVEL_STAFF = 4;
 
+    public const SCHEDULE_5DAYS = '5_days';
+
+    public const SCHEDULE_6DAYS = '6_days';
+
+    public const WORK_SCHEDULES = [
+        self::SCHEDULE_5DAYS => '5 Hari Kerja',
+        self::SCHEDULE_6DAYS => '6 Hari Kerja',
+    ];
+
+    public const WORK_SCHEDULE_DETAILS = [
+        self::SCHEDULE_5DAYS => [
+            'label'    => '5 Hari Kerja',
+            'weekdays' => 'Senin – Jumat',
+            'hours'    => '08:00 – 17:00',
+            'saturday' => null,
+        ],
+        self::SCHEDULE_6DAYS => [
+            'label'    => '6 Hari Kerja',
+            'weekdays' => 'Senin – Jumat',
+            'hours'    => '09:00 – 17:00',
+            'saturday' => 'Sabtu: 09:00 – 14:00',
+        ],
+    ];
+
     public const LEVEL_NAMES = [
         self::LEVEL_OWNER => 'Owner',
         self::LEVEL_MANAGER => 'Manager',
@@ -65,6 +89,7 @@ class User extends Authenticatable
         'managed_divisions',
         'position',
         'is_active',
+        'work_schedule',
     ];
 
     protected $hidden = [

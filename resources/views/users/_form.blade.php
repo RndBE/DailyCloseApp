@@ -175,6 +175,21 @@
                 </select>
             </div>
         </div>
+
+        <div class="row g-3 mt-1">
+            <div class="col-md-6">
+                <label class="form-label">Jadwal Kerja</label>
+                @php $currentSchedule = old('work_schedule', $user->work_schedule ?? \App\Models\User::SCHEDULE_5DAYS); @endphp
+                <select name="work_schedule" class="form-select">
+                    @foreach(\App\Models\User::WORK_SCHEDULE_DETAILS as $key => $detail)
+                        <option value="{{ $key }}" @selected($currentSchedule === $key)>
+                            {{ $detail['label'] }} — {{ $detail['weekdays'] }} {{ $detail['hours'] }}{{ $detail['saturday'] ? ', ' . $detail['saturday'] : '' }}
+                        </option>
+                    @endforeach
+                </select>
+                <div class="form-text">Jam kerja efektif karyawan ini.</div>
+            </div>
+        </div>
     </div>
 </div>
 

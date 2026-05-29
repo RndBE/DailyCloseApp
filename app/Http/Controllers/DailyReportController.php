@@ -95,6 +95,34 @@ class DailyReportController extends Controller
      * Query users yang dikelola oleh user yang login (sebagai "tim").
      * Mengikuti aturan yang sama dengan DailyReport::scopeVisibleTo.
      */
+    private function managerRowsQuery(User $user, string $date): \Illuminate\Support\Collection
+    {
+        if (!$user->isSuperAdmin() && !in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER], true)) {
+            return collect();
+        }
+
+        $query = User::query()
+            ->where('is_active', true)
+            ->where('level', User::LEVEL_MANAGER);
+
+        if (!$user->isSuperAdmin() && $user->level !== User::LEVEL_OWNER) {
+            $divisions = $user->visibleDivisions() ?? [];
+            if (empty($divisions)) {
+                return collect();
+            }
+            $query->whereIn('division', $divisions);
+        }
+
+        return $query
+            ->with(['dailyReports' => fn ($q) => $q->whereDate('report_date', $date)])
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($m) => (object) [
+                'user'   => $m,
+                'report' => $m->dailyReports->first(),
+            ]);
+    }
+
     private function teamMembersQuery(User $user): Builder
     {
         $query = User::query()
@@ -145,7 +173,7 @@ class DailyReportController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user->isSuperAdmin() || in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER], true),
+            $user->isSuperAdmin() || in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER, User::LEVEL_LEADER], true),
             403,
             'Anda tidak berhak mengakses halaman ini.'
         );
@@ -165,24 +193,37 @@ class DailyReportController extends Controller
             ->orderBy('name')
             ->get();
 
-        $rows = $members->map(fn ($member) => (object) [
-            'user'   => $member,
-            'report' => $member->dailyReports->first(),
-        ]);
+        // Managers get a dedicated section; exclude them from per-division breakdown
+        $rows = $members
+            ->filter(fn ($m) => $m->level !== User::LEVEL_MANAGER)
+            ->map(fn ($member) => (object) [
+                'user'   => $member,
+                'report' => $member->dailyReports->first(),
+            ]);
+
+        // Leader includes their own report alongside their team's reports
+        if ($user->level === User::LEVEL_LEADER) {
+            $selfReport = DailyReport::where('user_id', $user->id)->whereDate('report_date', $date)->first();
+            $rows = collect([(object) ['user' => $user, 'report' => $selfReport]])->merge($rows);
+        }
 
         $byDivision = $rows->groupBy(fn ($row) => $row->user->division ?? 'Tanpa Divisi');
 
+        $managerRows = $this->managerRowsQuery($user, $date);
+
+        $allRows = $rows->values()->merge($managerRows);
         $totalStats = [
-            'total'     => $rows->count(),
-            'submitted' => $rows->filter(fn ($r) => $r->report)->count(),
-            'missing'   => $rows->filter(fn ($r) => ! $r->report)->count(),
-            'overtime'  => $rows->filter(fn ($r) => $r->report?->overtime_status)->count(),
-            'help'      => $rows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
-            'late'      => $rows->filter(fn ($r) => $r->report?->is_late)->count(),
+            'total'     => $allRows->count(),
+            'submitted' => $allRows->filter(fn ($r) => $r->report)->count(),
+            'missing'   => $allRows->filter(fn ($r) => ! $r->report)->count(),
+            'overtime'  => $allRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
+            'help'      => $allRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
+            'late'      => $allRows->filter(fn ($r) => $r->report?->is_late)->count(),
         ];
 
         return view('daily-reports.rangkuman', [
             'byDivision'   => $byDivision,
+            'managerRows'  => $managerRows,
             'totalStats'   => $totalStats,
             'selectedDate' => $date,
         ]);
@@ -193,7 +234,7 @@ class DailyReportController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $user->isSuperAdmin() || in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER], true),
+            $user->isSuperAdmin() || in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER, User::LEVEL_LEADER], true),
             403
         );
 
@@ -212,24 +253,35 @@ class DailyReportController extends Controller
             ->orderBy('name')
             ->get();
 
-        $rows = $members->map(fn ($member) => (object) [
-            'user'   => $member,
-            'report' => $member->dailyReports->first(),
-        ]);
+        $rows = $members
+            ->filter(fn ($m) => $m->level !== User::LEVEL_MANAGER)
+            ->map(fn ($member) => (object) [
+                'user'   => $member,
+                'report' => $member->dailyReports->first(),
+            ]);
+
+        if ($user->level === User::LEVEL_LEADER) {
+            $selfReport = DailyReport::where('user_id', $user->id)->whereDate('report_date', $date)->first();
+            $rows = collect([(object) ['user' => $user, 'report' => $selfReport]])->merge($rows);
+        }
 
         $byDivision = $rows->groupBy(fn ($row) => $row->user->division ?? 'Tanpa Divisi');
 
+        $managerRows = $this->managerRowsQuery($user, $date);
+
+        $allRows = $rows->values()->merge($managerRows);
         $totalStats = [
-            'total'     => $rows->count(),
-            'submitted' => $rows->filter(fn ($r) => $r->report)->count(),
-            'missing'   => $rows->filter(fn ($r) => ! $r->report)->count(),
-            'overtime'  => $rows->filter(fn ($r) => $r->report?->overtime_status)->count(),
-            'help'      => $rows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
-            'late'      => $rows->filter(fn ($r) => $r->report?->is_late)->count(),
+            'total'     => $allRows->count(),
+            'submitted' => $allRows->filter(fn ($r) => $r->report)->count(),
+            'missing'   => $allRows->filter(fn ($r) => ! $r->report)->count(),
+            'overtime'  => $allRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
+            'help'      => $allRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
+            'late'      => $allRows->filter(fn ($r) => $r->report?->is_late)->count(),
         ];
 
         return view('daily-reports.rangkuman-cetak', [
             'byDivision'   => $byDivision,
+            'managerRows'  => $managerRows,
             'totalStats'   => $totalStats,
             'selectedDate' => $date,
             'generatedBy'  => $user->name,
@@ -303,6 +355,8 @@ class DailyReportController extends Controller
             'month'       => $month,
             'monthLabel'  => $start->translatedFormat('F Y'),
             'totalDays'   => $totalDays,
+            'startDate'   => $start,
+            'endDate'     => $end,
             'generatedBy' => $user->name,
         ];
     }
