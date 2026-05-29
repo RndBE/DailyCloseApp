@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DailyReportRequest;
 use App\Models\DailyReport;
+use App\Models\Holiday;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -348,6 +349,10 @@ class DailyReportController extends Controller
             'late'      => $rows->sum('late'),
         ];
 
+        $holidays = Holiday::whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->get()
+            ->keyBy(fn ($h) => $h->date->toDateString());
+
         return [
             'byDivision'  => $byDivision,
             'totalStats'  => $totalStats,
@@ -357,6 +362,7 @@ class DailyReportController extends Controller
             'totalDays'   => $totalDays,
             'startDate'   => $start,
             'endDate'     => $end,
+            'holidays'    => $holidays,
             'generatedBy' => $user->name,
         ];
     }

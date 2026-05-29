@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkScheduleController;
 use Illuminate\Support\Facades\Route;
@@ -36,4 +37,6 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/pengaturan/jadwal-kerja', [WorkScheduleController::class, 'index'])->name('work-schedule.index');
     Route::post('/pengaturan/jadwal-kerja', [WorkScheduleController::class, 'saveAll'])->name('work-schedule.save-all');
+
+    Route::resource('holidays', HolidayController::class)->except(['create', 'show', 'edit']);
 });

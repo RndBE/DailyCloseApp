@@ -276,6 +276,9 @@
                     <a href="{{ route('work-schedule.index') }}" class="nav-link-item {{ request()->routeIs('work-schedule.*') ? 'active' : '' }}">
                         <i class="bi bi-clock"></i> Jadwal Kerja
                     </a>
+                    <a href="{{ route('holidays.index') }}" class="nav-link-item {{ request()->routeIs('holidays.*') ? 'active' : '' }}">
+                        <i class="bi bi-calendar-event"></i> Hari Libur Nasional
+                    </a>
                 @endif
             </nav>
             <div class="footer">

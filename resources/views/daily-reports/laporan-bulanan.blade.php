@@ -226,15 +226,20 @@ $splitCell = function(string $text): array {
                                 <tbody>
                                     @while($iter->lte($endDate))
                                         @php
-                                            $dateStr   = $iter->toDateString();
-                                            $r         = $reportsByDate->get($dateStr);
-                                            $isHoliday = in_array($iter->dayOfWeek, $holidayDays, true);
-                                            $isFuture  = $iter->gt($today);
+                                            $dateStr         = $iter->toDateString();
+                                            $r               = $reportsByDate->get($dateStr);
+                                            $nationalHoliday = $holidays->get($dateStr);
+                                            $isWeekendOff    = in_array($iter->dayOfWeek, $holidayDays, true);
+                                            $isHoliday       = $isWeekendOff || $nationalHoliday !== null;
+                                            $isFuture        = $iter->gt($today);
                                         @endphp
                                         @php
                                             $trStyle = $isHoliday ? 'background:#fef2f2' : ($isFuture ? 'background:#fafafa' : '');
                                             $dateColor = $isHoliday ? '#b02a37' : 'inherit';
                                             $dayColor = $isHoliday ? '#b02a37' : '#64748b';
+                                            $holidayLabel = $nationalHoliday
+                                                ? $nationalHoliday->name
+                                                : 'Libur';
                                         @endphp
                                         <tr style="{{ $trStyle }}">
                                             <td class="fw-semibold small" style="color:{{ $dateColor }}">
@@ -243,16 +248,22 @@ $splitCell = function(string $text): array {
                                                     {{ $iter->translatedFormat('l') }}
                                                     @if($isHoliday) <i class="bi bi-calendar-x ms-1"></i> @endif
                                                 </div>
+                                                @if($nationalHoliday)
+                                                    <div class="mt-1" style="font-size:.7rem; color:#b02a37; font-weight:600">
+                                                        <i class="bi bi-flag-fill me-1"></i>{{ $nationalHoliday->name }}
+                                                    </div>
+                                                @endif
                                                 @if($isHoliday && $r)
                                                     <span class="badge mt-1" style="background:#b02a37; color:#fff; font-size:.65rem; font-weight:600">
-                                                        <i class="bi bi-stopwatch me-1"></i>Lembur di hari libur
+                                                        <i class="bi bi-stopwatch me-1"></i>
+                                                        Lembur di {{ $nationalHoliday ? 'libur nasional' : 'hari libur' }}
                                                     </span>
                                                 @endif
                                             </td>
 
                                             @if($isHoliday && !$r)
                                                 <td colspan="6" class="text-center small fst-italic" style="color:#b02a37">
-                                                    <i class="bi bi-calendar-x me-1"></i>Libur
+                                                    <i class="bi bi-calendar-x me-1"></i>{{ $holidayLabel }}
                                                 </td>
                                             @elseif(!$r)
                                                 <td class="text-center text-muted small">—</td>
