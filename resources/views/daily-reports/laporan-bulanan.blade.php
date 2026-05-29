@@ -84,7 +84,7 @@
                 </thead>
                 <tbody>
                     @foreach($rows as $row)
-                        @php $pct = $totalDays > 0 ? round($row->submitted / $totalDays * 100) : 0; @endphp
+                        @php $pct = $row->total_days > 0 ? round($row->submitted / $row->total_days * 100) : 0; @endphp
                         <tr>
                             <td>
                                 <div class="fw-semibold">{{ $row->user->name }}</div>
@@ -92,7 +92,7 @@
                             </td>
                             <td class="text-muted small">{{ $row->user->level_name }}</td>
                             <td class="text-center">
-                                <div class="fw-semibold">{{ $row->submitted }}/{{ $totalDays }}</div>
+                                <div class="fw-semibold">{{ $row->submitted }}/{{ $row->total_days }}</div>
                                 <div class="progress mt-1" style="height:5px; width:80px; margin:0 auto">
                                     <div class="progress-bar {{ $pct >= 80 ? 'bg-success' : ($pct >= 50 ? 'bg-warning' : 'bg-danger') }}"
                                          style="width:{{ $pct }}%"></div>
@@ -100,7 +100,12 @@
                                 <div class="text-muted" style="font-size:.75rem">{{ $pct }}%</div>
                             </td>
                             <td class="text-center">
-                                @if($row->overtime > 0)
+                                @if($row->user->isSecurity())
+                                    @if($row->overtime_hours > 0)
+                                        <span class="badge-soft bg-soft-warning">{{ rtrim(rtrim(number_format($row->overtime_hours, 1), '0'), '.') }} jam</span>
+                                    @else <span class="text-muted">—</span>
+                                    @endif
+                                @elseif($row->overtime > 0)
                                     <span class="badge-soft bg-soft-warning">{{ $row->overtime }}x</span>
                                 @else <span class="text-muted">—</span>
                                 @endif
@@ -175,9 +180,9 @@ $splitCell = function(string $text): array {
 
                         {{-- Ringkasan mini --}}
                         <div class="d-flex gap-3 p-3 border-bottom flex-wrap" style="background:#fafbff">
-                            @php $pct = $totalDays > 0 ? round($row->submitted / $totalDays * 100) : 0; @endphp
+                            @php $pct = $row->total_days > 0 ? round($row->submitted / $row->total_days * 100) : 0; @endphp
                             <div class="text-center px-3">
-                                <div class="fw-bold h5 mb-0">{{ $row->submitted }}/{{ $totalDays }}</div>
+                                <div class="fw-bold h5 mb-0">{{ $row->submitted }}/{{ $row->total_days }}</div>
                                 <div class="small text-muted">Laporan</div>
                                 <div class="progress mt-1" style="height:4px;width:70px;margin:0 auto">
                                     <div class="progress-bar {{ $pct >= 80 ? 'bg-success' : ($pct >= 50 ? 'bg-warning' : 'bg-danger') }}"
@@ -187,8 +192,13 @@ $splitCell = function(string $text): array {
                             </div>
                             <div class="vr"></div>
                             <div class="text-center px-3">
-                                <div class="fw-bold h5 mb-0 {{ $row->overtime > 0 ? 'text-warning' : 'text-muted' }}">{{ $row->overtime }}</div>
-                                <div class="small text-muted">Lembur</div>
+                                @if($row->user->isSecurity())
+                                    <div class="fw-bold h5 mb-0 {{ $row->overtime_hours > 0 ? 'text-warning' : 'text-muted' }}">{{ rtrim(rtrim(number_format($row->overtime_hours, 1), '0'), '.') }} <span class="small">jam</span></div>
+                                    <div class="small text-muted">Lembur ({{ $row->overtime }} shift)</div>
+                                @else
+                                    <div class="fw-bold h5 mb-0 {{ $row->overtime > 0 ? 'text-warning' : 'text-muted' }}">{{ $row->overtime }}</div>
+                                    <div class="small text-muted">Lembur</div>
+                                @endif
                             </div>
                             <div class="vr"></div>
                             <div class="text-center px-3">
@@ -206,6 +216,8 @@ $splitCell = function(string $text): array {
                         @php
                             $schedule    = $row->user->work_schedule ?? \App\Models\User::SCHEDULE_5DAYS;
                             $holidayDays = $schedule === \App\Models\User::SCHEDULE_6DAYS ? [0] : [0, 6];
+                            $isSecurity  = $schedule === \App\Models\User::SCHEDULE_SECURITY;
+                            $secSchedule = $isSecurity ? ($securitySchedules->get($row->user->id) ?? collect()) : collect();
                             $today       = \Carbon\Carbon::today();
                             $reportsByDate = $row->reports->keyBy(fn($r) => $r->report_date->toDateString());
                             $iter        = $startDate->copy();
@@ -229,8 +241,18 @@ $splitCell = function(string $text): array {
                                             $dateStr         = $iter->toDateString();
                                             $r               = $reportsByDate->get($dateStr);
                                             $nationalHoliday = $holidays->get($dateStr);
-                                            $isWeekendOff    = in_array($iter->dayOfWeek, $holidayDays, true);
-                                            $isHoliday       = $isWeekendOff || $nationalHoliday !== null;
+                                            $secRow          = $isSecurity ? $secSchedule->get($dateStr) : null;
+                                            // Lembur otomatis security: kelebihan durasi shift di atas 8 jam (shift 12 jam → 4 jam).
+                                            $autoOt          = ($isSecurity && $secRow && ! $secRow->is_off) ? $secRow->overtimeHours() : 0;
+                                            $autoOtLabel     = $autoOt > 0 ? rtrim(rtrim(number_format($autoOt, 1), '0'), '.') . ' jam' : null;
+                                            if ($isSecurity) {
+                                                // Security: libur = hari off terjadwal. Libur nasional tidak memaksa off.
+                                                $isWeekendOff = $secRow ? $secRow->is_off : false;
+                                                $isHoliday    = $isWeekendOff;
+                                            } else {
+                                                $isWeekendOff = in_array($iter->dayOfWeek, $holidayDays, true);
+                                                $isHoliday    = $isWeekendOff || $nationalHoliday !== null;
+                                            }
                                             $isFuture        = $iter->gt($today);
                                         @endphp
                                         @php
@@ -248,6 +270,13 @@ $splitCell = function(string $text): array {
                                                     {{ $iter->translatedFormat('l') }}
                                                     @if($isHoliday) <i class="bi bi-calendar-x ms-1"></i> @endif
                                                 </div>
+                                                @if($isSecurity && $secRow && ! $secRow->is_off)
+                                                    <div class="mt-1">
+                                                        <span class="badge" style="background:#0d6efd; color:#fff; font-size:.68rem; font-weight:600">
+                                                            <i class="bi bi-clock me-1"></i>{{ $secRow->shift_label }}
+                                                        </span>
+                                                    </div>
+                                                @endif
                                                 @if($nationalHoliday)
                                                     <div class="mt-1" style="font-size:.7rem; color:#b02a37; font-weight:600">
                                                         <i class="bi bi-flag-fill me-1"></i>{{ $nationalHoliday->name }}
@@ -270,7 +299,13 @@ $splitCell = function(string $text): array {
                                                 <td class="text-center text-muted small">—</td>
                                                 <td class="text-center text-muted small">—</td>
                                                 <td class="text-center text-muted small">—</td>
-                                                <td class="text-center text-muted small">—</td>
+                                                <td class="text-center">
+                                                    @if($autoOtLabel)
+                                                        <span class="badge-soft bg-soft-warning" style="font-size:.75rem" title="Lembur otomatis dari shift 12 jam">{{ $autoOtLabel }}</span>
+                                                    @else
+                                                        <span class="text-muted small">—</span>
+                                                    @endif
+                                                </td>
                                                 <td class="text-center text-muted small">—</td>
                                             @else
                                                 <td class="small">
@@ -315,7 +350,13 @@ $splitCell = function(string $text): array {
                                                     {{ substr($r->work_finished_at, 0, 5) }}
                                                 </td>
                                                 <td class="text-center">
-                                                    @if($r->overtime_status)
+                                                    @if($isSecurity)
+                                                        @if($autoOtLabel)
+                                                            <span class="badge-soft bg-soft-warning" style="font-size:.75rem" title="Lembur otomatis dari shift 12 jam">{{ $autoOtLabel }}</span>
+                                                        @else
+                                                            <span class="text-muted">—</span>
+                                                        @endif
+                                                    @elseif($r->overtime_status)
                                                         <span class="badge-soft bg-soft-warning" style="font-size:.75rem">
                                                             {{ $r->overtime_start ? substr($r->overtime_start,0,5).' - '.substr($r->overtime_end,0,5) : 'Ya' }}
                                                         </span>

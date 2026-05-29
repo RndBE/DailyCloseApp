@@ -276,8 +276,16 @@
                     <a href="{{ route('work-schedule.index') }}" class="nav-link-item {{ request()->routeIs('work-schedule.*') ? 'active' : '' }}">
                         <i class="bi bi-clock"></i> Jadwal Kerja
                     </a>
+                    <a href="{{ route('security-schedule.index') }}" class="nav-link-item {{ request()->routeIs('security-schedule.*') ? 'active' : '' }}">
+                        <i class="bi bi-shield-check"></i> Jadwal Security
+                    </a>
                     <a href="{{ route('holidays.index') }}" class="nav-link-item {{ request()->routeIs('holidays.*') ? 'active' : '' }}">
                         <i class="bi bi-calendar-event"></i> Hari Libur Nasional
+                    </a>
+                @elseif(auth()->user()->canManageSecuritySchedule())
+                    <div class="nav-title mt-3">Administrasi</div>
+                    <a href="{{ route('security-schedule.index') }}" class="nav-link-item {{ request()->routeIs('security-schedule.*') ? 'active' : '' }}">
+                        <i class="bi bi-shield-check"></i> Jadwal Security
                     </a>
                 @endif
             </nav>

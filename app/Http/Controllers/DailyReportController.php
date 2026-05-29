@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DailyReportRequest;
 use App\Models\DailyReport;
 use App\Models\Holiday;
+use App\Models\SecuritySchedule;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -324,18 +325,56 @@ class DailyReportController extends Controller
             ->get()
             ->groupBy('user_id');
 
+        // Jadwal security (jika ada member security) — untuk hitung hari kerja efektif & tampilan shift
+        $securityMemberIds = $members
+            ->filter(fn ($m) => $m->work_schedule === User::SCHEDULE_SECURITY)
+            ->pluck('id');
+
+        $securitySchedules = collect();
+        if ($securityMemberIds->isNotEmpty()) {
+            $securitySchedules = SecuritySchedule::query()
+                ->whereIn('user_id', $securityMemberIds)
+                ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+                ->get()
+                ->groupBy('user_id')
+                ->map(fn ($g) => $g->keyBy(fn ($s) => $s->date->toDateString()));
+        }
+
         // Susun data per user
-        $rows = $members->map(function ($member) use ($reports, $totalDays) {
+        $rows = $members->map(function ($member) use ($reports, $totalDays, $securitySchedules) {
             $userReports = $reports->get($member->id, collect());
+
+            $isSecurity    = $member->work_schedule === User::SCHEDULE_SECURITY;
+            $effectiveDays = $totalDays;
+            $overtimeCount = $userReports->where('overtime_status', true)->count();
+            $overtimeHours = null;
+
+            if ($isSecurity) {
+                $sched = $securitySchedules->get($member->id);
+                if ($sched) {
+                    // Hari kerja efektif = total hari − hari libur terjadwal.
+                    $effectiveDays = max(0, $totalDays - $sched->where('is_off', true)->count());
+
+                    // Lembur dihitung otomatis dari shift 12 jam (kelebihan di atas 8 jam).
+                    $overtimeCount = $sched->filter(fn ($s) => $s->overtimeHours() > 0)->count();
+                    $overtimeHours = $sched->sum(fn ($s) => $s->overtimeHours());
+                } else {
+                    $effectiveDays = $totalDays;
+                    $overtimeCount = 0;
+                    $overtimeHours = 0;
+                }
+            }
+
             return (object) [
-                'user'        => $member,
-                'reports'     => $userReports,
-                'submitted'   => $userReports->count(),
-                'total_days'  => $totalDays,
-                'overtime'    => $userReports->where('overtime_status', true)->count(),
-                'need_help'   => $userReports->where('need_leader_help', true)->count(),
-                'late'        => $userReports->where('is_late', true)->count(),
-                'missing'     => $totalDays - $userReports->count(),
+                'user'           => $member,
+                'reports'        => $userReports,
+                'submitted'      => $userReports->count(),
+                'total_days'     => $effectiveDays,
+                'overtime'       => $overtimeCount,
+                'overtime_hours' => $overtimeHours,
+                'need_help'      => $userReports->where('need_leader_help', true)->count(),
+                'late'           => $userReports->where('is_late', true)->count(),
+                'missing'        => $effectiveDays - $userReports->count(),
             ];
         });
 
@@ -363,6 +402,7 @@ class DailyReportController extends Controller
             'startDate'   => $start,
             'endDate'     => $end,
             'holidays'    => $holidays,
+            'securitySchedules' => $securitySchedules,
             'generatedBy' => $user->name,
         ];
     }

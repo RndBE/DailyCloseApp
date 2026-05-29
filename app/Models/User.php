@@ -23,9 +23,12 @@ class User extends Authenticatable
 
     public const SCHEDULE_6DAYS = '6_days';
 
+    public const SCHEDULE_SECURITY = 'security';
+
     public const WORK_SCHEDULES = [
         self::SCHEDULE_5DAYS => '5 Hari Kerja',
         self::SCHEDULE_6DAYS => '6 Hari Kerja',
+        self::SCHEDULE_SECURITY => 'Security (Shift)',
     ];
 
     public const WORK_SCHEDULE_DETAILS = [
@@ -40,6 +43,12 @@ class User extends Authenticatable
             'weekdays' => 'Senin – Jumat',
             'hours'    => '09:00 – 17:00',
             'saturday' => 'Sabtu: 09:00 – 14:00',
+        ],
+        self::SCHEDULE_SECURITY => [
+            'label'    => 'Security (Shift)',
+            'weekdays' => 'Shift bergilir',
+            'hours'    => 'Jadwal diatur per tanggal',
+            'saturday' => null,
         ],
     ];
 
@@ -68,7 +77,11 @@ class User extends Authenticatable
         'HRD',
         'Publikasi',
         'Hardware',
+        self::DIVISION_SECURITY,
     ];
+
+    /** Nama divisi security (dipakai untuk gating akses jadwal security). */
+    public const DIVISION_SECURITY = 'Security';
 
     /** Daftar jabatan yang valid. */
     public const POSITIONS = [
@@ -113,6 +126,16 @@ class User extends Authenticatable
         return $this->hasMany(DailyReport::class);
     }
 
+    public function securitySchedules(): HasMany
+    {
+        return $this->hasMany(SecuritySchedule::class);
+    }
+
+    public function isSecurity(): bool
+    {
+        return $this->work_schedule === self::SCHEDULE_SECURITY;
+    }
+
     public function getLevelNameAttribute(): string
     {
         return self::LEVEL_NAMES[$this->level] ?? 'Unknown';
@@ -135,6 +158,23 @@ class User extends Authenticatable
     public function canManageUsers(): bool
     {
         return $this->isSuperAdmin();
+    }
+
+    /**
+     * Boleh mengatur jadwal security?
+     * - Super Admin / Owner : ya (semua security)
+     * - Manager / Leader    : ya, jika membawahi divisi Security (dibatasi ke divisinya)
+     * - Lainnya             : tidak
+     */
+    public function canManageSecuritySchedule(): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        $visible = $this->visibleDivisions();
+
+        return $visible === null || in_array(self::DIVISION_SECURITY, $visible, true);
     }
 
     /**
