@@ -130,6 +130,7 @@
                 <th>Total Anggota</th>
                 <th>Total Laporan Terkirim</th>
                 <th>Total Lembur</th>
+                <th>Cuti / Sakit</th>
                 <th>Butuh Bantuan</th>
                 <th>Sanksi Terlambat</th>
             </tr>
@@ -139,6 +140,7 @@
                 <td class="text-center bold">{{ $totalStats['members'] }}</td>
                 <td class="text-center bold">{{ $totalStats['submitted'] }}</td>
                 <td class="text-center bold">{{ $totalStats['overtime'] }}</td>
+                <td class="text-center bold">{{ $totalStats['leave'] }}</td>
                 <td class="text-center bold">{{ $totalStats['need_help'] }}</td>
                 <td class="text-center bold">{{ $totalStats['late'] }}</td>
             </tr>
@@ -161,6 +163,7 @@
                         <th class="left" style="width:70px">Level</th>
                         <th style="width:110px">Laporan Terkirim</th>
                         <th style="width:70px">Lembur</th>
+                        <th style="width:70px">Cuti / Sakit</th>
                         <th style="width:80px">Butuh Bantuan</th>
                         <th style="width:70px">Sanksi</th>
                     </tr>
@@ -185,6 +188,7 @@
                                 <div style="font-size:8.5pt; color:#666">{{ $pct }}%</div>
                             </td>
                             <td class="text-center">{{ $row->overtime > 0 ? $row->overtime.'x' : '—' }}</td>
+                            <td class="text-center">{{ $row->leave > 0 ? $row->leave.' hari' : '—' }}</td>
                             <td class="text-center">{{ $row->need_help > 0 ? $row->need_help.'x' : '—' }}</td>
                             <td class="text-center bold {{ $row->late > 0 ? 'text-muted' : '' }}">
                                 {{ $row->late > 0 ? $row->late.'x' : '—' }}
@@ -194,7 +198,7 @@
                         {{-- Detail laporan per hari --}}
                         @if($row->reports->isNotEmpty())
                             <tr>
-                                <td colspan="6" style="padding:4px 8px 10px; background:#fafafa">
+                                <td colspan="7" style="padding:4px 8px 10px; background:#fafafa">
                                     <div class="detail-wrap">
                                         <div class="detail-title">Detail laporan {{ $row->user->name }}:</div>
                                         <table class="detail-table">

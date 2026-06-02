@@ -306,7 +306,9 @@
                         <span style="font-size:9pt; opacity:.85;">{{ $mRow->user->division ?? 'Tanpa Divisi' }}</span>
                     </div>
                     <div style="padding:10px 14px;">
-                        @if(!$mr)
+                        @if(!$mr && ($mRow->leave ?? null))
+                            <p style="color:#0c6f97; font-style:italic; margin:0;">{{ $mRow->leave->type_label }}@if($mRow->leave->reason) — {{ $mRow->leave->reason }}@endif</p>
+                        @elseif(!$mr)
                             <p style="color:#b15c00; font-style:italic; margin:0;">Belum mengirim laporan</p>
                         @else
                             @php $mn = 0; @endphp
@@ -419,7 +421,8 @@
             $flatten = fn($col) => $col->flatMap(fn($v) => $split($v))->filter()->values();
 
             $submitted  = $rows->filter(fn($r) => $r->report);
-            $missing    = $rows->filter(fn($r) => !$r->report);
+            $onLeave    = $rows->filter(fn($r) => !$r->report && ($r->leave ?? null));
+            $missing    = $rows->filter(fn($r) => !$r->report && !($r->leave ?? null));
             $overtime   = $submitted->filter(fn($r) => $r->report->overtime_status);
             $needHelp   = $submitted->filter(fn($r) => $r->report->need_leader_help);
             $lateRows   = $submitted->filter(fn($r) => $r->report->is_late);
@@ -443,6 +446,13 @@
                     <div class="alert-missing">
                         <strong>Belum mengirim laporan:</strong>
                         {{ $missing->map(fn($r) => $r->user->name)->join(', ') }}
+                    </div>
+                @endif
+
+                @if($onLeave->count() > 0)
+                    <div class="alert-missing" style="background:#e5f4fb; border-color:#0c6f97; color:#0c6f97">
+                        <strong>Cuti / Sakit:</strong>
+                        {{ $onLeave->map(fn($r) => $r->user->name . ' (' . $r->leave->type_label . ')')->join(', ') }}
                     </div>
                 @endif
 

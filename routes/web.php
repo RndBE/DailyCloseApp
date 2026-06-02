@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\SecurityScheduleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkScheduleController;
@@ -31,6 +32,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('daily-reports/laporan-bulanan/cetak', [DailyReportController::class, 'laporanBulananCetak'])->name('daily-reports.bulanan.cetak');
     Route::get('daily-reports/laporan-bulanan/download', [DailyReportController::class, 'laporanBulananDownload'])->name('daily-reports.bulanan.download');
     Route::resource('daily-reports', DailyReportController::class);
+
+    Route::get('cuti', [LeaveController::class, 'index'])->name('leaves.index');
+    Route::post('cuti', [LeaveController::class, 'store'])->name('leaves.store');
+    Route::delete('cuti/{leave}', [LeaveController::class, 'destroy'])->name('leaves.destroy');
 
     Route::middleware('manage.users')->group(function () {
         Route::resource('users', UserController::class)->except(['show']);

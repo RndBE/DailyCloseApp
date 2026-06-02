@@ -262,6 +262,9 @@
                 <a href="{{ route('daily-reports.mine') }}" class="nav-link-item {{ request()->routeIs('daily-reports.mine') ? 'active' : '' }}">
                     <i class="bi bi-person-lines-fill"></i> Laporan Saya
                 </a>
+                <a href="{{ route('leaves.index') }}" class="nav-link-item {{ request()->routeIs('leaves.*') ? 'active' : '' }}">
+                    <i class="bi bi-calendar-heart"></i> Cuti / Sakit
+                </a>
                 @if($hasTeam)
                     <a href="{{ route('daily-reports.index') }}" class="nav-link-item {{ request()->routeIs('daily-reports.index') ? 'active' : '' }}">
                         <i class="bi bi-people"></i> {{ $teamMenuLabel }}

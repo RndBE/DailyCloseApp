@@ -68,7 +68,14 @@ $splitText = function(string $text): array {
                 <span class="text-muted small">{{ $mRow->user->division ?? 'Tanpa Divisi' }}</span>
             </div>
             <div class="card-body px-4 py-3">
-                @if(!$mr)
+                @if(!$mr && ($mRow->leave ?? null))
+                    <div class="p-3 rounded" style="background:#e5f4fb; border-left:3px solid #0c6f97">
+                        <span style="color:#0c6f97">
+                            <i class="bi bi-calendar-heart me-1"></i>{{ $mRow->leave->type_label }}
+                            @if($mRow->leave->reason) — {{ $mRow->leave->reason }} @endif
+                        </span>
+                    </div>
+                @elseif(!$mr)
                     <div class="p-3 rounded" style="background:#fff5e6; border-left:3px solid #f59e0b">
                         <span style="color:#b15c00">
                             <i class="bi bi-exclamation-circle me-1"></i>Belum mengirim laporan
@@ -204,7 +211,8 @@ $splitText = function(string $text): array {
 @forelse($byDivision as $division => $rows)
     @php
         $submitted  = $rows->filter(fn($r) => $r->report);
-        $missing    = $rows->filter(fn($r) => !$r->report);
+        $onLeave    = $rows->filter(fn($r) => !$r->report && ($r->leave ?? null));
+        $missing    = $rows->filter(fn($r) => !$r->report && !($r->leave ?? null));
         $overtime   = $submitted->filter(fn($r) => $r->report->overtime_status);
         $needHelp   = $submitted->filter(fn($r) => $r->report->need_leader_help);
         $lateRows   = $submitted->filter(fn($r) => $r->report->is_late);
@@ -239,6 +247,18 @@ $splitText = function(string $text): array {
                     </span>
                     <span class="ms-1" style="color:#b15c00">
                         {{ $missing->map(fn($r) => $r->user->name)->join(', ') }}
+                    </span>
+                </div>
+            @endif
+
+            {{-- Cuti / sakit --}}
+            @if($onLeave->count() > 0)
+                <div class="mb-4 p-3 rounded" style="background:#e5f4fb; border-left:3px solid #0c6f97">
+                    <span class="fw-semibold" style="color:#0c6f97">
+                        <i class="bi bi-calendar-heart me-1"></i>Cuti / Sakit:
+                    </span>
+                    <span class="ms-1" style="color:#0c6f97">
+                        {{ $onLeave->map(fn($r) => $r->user->name . ' (' . $r->leave->type_label . ')')->join(', ') }}
                     </span>
                 </div>
             @endif

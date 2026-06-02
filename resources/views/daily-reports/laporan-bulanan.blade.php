@@ -47,6 +47,7 @@
         ['val' => $totalStats['members'],   'label' => 'Total Anggota',   'bg' => '#f1f5f9', 'color' => '#1e293b'],
         ['val' => $totalStats['submitted'],  'label' => 'Total Laporan',   'bg' => '#e7f7ee', 'color' => '#157347'],
         ['val' => $totalStats['overtime'],   'label' => 'Total Lembur',    'bg' => '#fff5e6', 'color' => '#b15c00'],
+        ['val' => $totalStats['leave'],      'label' => 'Cuti / Sakit',    'bg' => '#e5f4fb', 'color' => '#0c6f97'],
         ['val' => $totalStats['need_help'],  'label' => 'Butuh Bantuan',   'bg' => '#fef2f2', 'color' => '#b02a37'],
         ['val' => $totalStats['late'],       'label' => 'Sanksi',          'bg' => '#fef2f2', 'color' => '#b02a37'],
     ] as $s)
@@ -220,6 +221,7 @@ $splitCell = function(string $text): array {
                             $secSchedule = $isSecurity ? ($securitySchedules->get($row->user->id) ?? collect()) : collect();
                             $today       = \Carbon\Carbon::today();
                             $reportsByDate = $row->reports->keyBy(fn($r) => $r->report_date->toDateString());
+                            $memberLeaves = $leaves->get($row->user->id) ?? [];
                             $iter        = $startDate->copy();
                         @endphp
                         <div class="table-responsive">
@@ -242,6 +244,7 @@ $splitCell = function(string $text): array {
                                             $r               = $reportsByDate->get($dateStr);
                                             $nationalHoliday = $holidays->get($dateStr);
                                             $secRow          = $isSecurity ? $secSchedule->get($dateStr) : null;
+                                            $leave           = $memberLeaves[$dateStr] ?? null;
                                             // Lembur otomatis security: kelebihan durasi shift di atas 8 jam (shift 12 jam → 4 jam).
                                             $autoOt          = ($isSecurity && $secRow && ! $secRow->is_off) ? $secRow->overtimeHours() : 0;
                                             $autoOtLabel     = $autoOt > 0 ? rtrim(rtrim(number_format($autoOt, 1), '0'), '.') . ' jam' : null;
@@ -256,9 +259,16 @@ $splitCell = function(string $text): array {
                                             $isFuture        = $iter->gt($today);
                                         @endphp
                                         @php
-                                            $trStyle = $isHoliday ? 'background:#fef2f2' : ($isFuture ? 'background:#fafafa' : '');
-                                            $dateColor = $isHoliday ? '#b02a37' : 'inherit';
-                                            $dayColor = $isHoliday ? '#b02a37' : '#64748b';
+                                            $isLeaveDay = $leave && ! $r && ! $isHoliday;
+                                            $isSakit    = $leave && $leave->type === \App\Models\Leave::TYPE_SAKIT;
+                                            $leaveBg    = $isSakit ? '#fdecec' : '#e5f4fb';
+                                            $leaveColor = $isSakit ? '#b02a37' : '#0c6f97';
+
+                                            $trStyle = $isHoliday
+                                                ? 'background:#fef2f2'
+                                                : ($isLeaveDay ? 'background:' . $leaveBg : ($isFuture ? 'background:#fafafa' : ''));
+                                            $dateColor = $isHoliday ? '#b02a37' : ($isLeaveDay ? $leaveColor : 'inherit');
+                                            $dayColor = $isHoliday ? '#b02a37' : ($isLeaveDay ? $leaveColor : '#64748b');
                                             $holidayLabel = $nationalHoliday
                                                 ? $nationalHoliday->name
                                                 : 'Libur';
@@ -282,6 +292,13 @@ $splitCell = function(string $text): array {
                                                         <i class="bi bi-flag-fill me-1"></i>{{ $nationalHoliday->name }}
                                                     </div>
                                                 @endif
+                                                @if($leave)
+                                                    <div class="mt-1">
+                                                        <span class="badge" style="background:{{ $leaveColor }}; color:#fff; font-size:.68rem; font-weight:600">
+                                                            <i class="bi {{ $isSakit ? 'bi-thermometer-half' : 'bi-calendar-heart' }} me-1"></i>{{ $leave->type_label }}
+                                                        </span>
+                                                    </div>
+                                                @endif
                                                 @if($isHoliday && $r)
                                                     <span class="badge mt-1" style="background:#b02a37; color:#fff; font-size:.65rem; font-weight:600">
                                                         <i class="bi bi-stopwatch me-1"></i>
@@ -293,6 +310,11 @@ $splitCell = function(string $text): array {
                                             @if($isHoliday && !$r)
                                                 <td colspan="6" class="text-center small fst-italic" style="color:#b02a37">
                                                     <i class="bi bi-calendar-x me-1"></i>{{ $holidayLabel }}
+                                                </td>
+                                            @elseif($leave && !$r)
+                                                <td colspan="6" class="text-center small fst-italic" style="color:{{ $leaveColor }}">
+                                                    <i class="bi {{ $isSakit ? 'bi-thermometer-half' : 'bi-calendar-heart' }} me-1"></i>{{ $leave->type_label }}
+                                                    @if($leave->reason) — {{ $leave->reason }} @endif
                                                 </td>
                                             @elseif(!$r)
                                                 <td class="text-center text-muted small">—</td>

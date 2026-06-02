@@ -45,15 +45,20 @@ class SimpleXlsx
      *  5 = tebal + border (header tabel)
      *  6 = wrap + border (sel tabel)
      *  7 = wrap + latar libur + border (sel tabel libur)
+     *  8 = wrap + latar cuti/sakit + border (sel tabel cuti/sakit)
      */
     private function styleIndex(array $opt): int
     {
         $bold   = $opt['bold'] ?? false;
         $fill   = $opt['fill'] ?? false;
+        $leave  = $opt['leave'] ?? false;
         $wrap   = $opt['wrap'] ?? false;
         $border = $opt['border'] ?? false;
 
         if ($border) {
+            if ($leave) {
+                return 8;
+            }
             if ($fill) {
                 return 7;
             }
@@ -246,10 +251,11 @@ class SimpleXlsx
              .   '<font><sz val="11"/><name val="Calibri"/></font>'
              .   '<font><b/><sz val="11"/><name val="Calibri"/></font>'
              . '</fonts>'
-             . '<fills count="3">'
+             . '<fills count="4">'
              .   '<fill><patternFill patternType="none"/></fill>'
              .   '<fill><patternFill patternType="gray125"/></fill>'
              .   '<fill><patternFill patternType="solid"><fgColor rgb="FFFDE7E9"/><bgColor indexed="64"/></patternFill></fill>'
+             .   '<fill><patternFill patternType="solid"><fgColor rgb="FFE5F4FB"/><bgColor indexed="64"/></patternFill></fill>'
              . '</fills>'
              . '<borders count="2">'
              .   '<border><left/><right/><top/><bottom/><diagonal/></border>'
@@ -262,7 +268,7 @@ class SimpleXlsx
              .   '</border>'
              . '</borders>'
              . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-             . '<cellXfs count="8">'
+             . '<cellXfs count="9">'
              .   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
              .   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
              .   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
@@ -271,6 +277,7 @@ class SimpleXlsx
              .   '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
              .   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
              .   '<xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+             .   '<xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
              . '</cellXfs>'
              . '</styleSheet>';
     }

@@ -131,6 +131,11 @@ class User extends Authenticatable
         return $this->hasMany(SecuritySchedule::class);
     }
 
+    public function leaves(): HasMany
+    {
+        return $this->hasMany(Leave::class);
+    }
+
     public function isSecurity(): bool
     {
         return $this->work_schedule === self::SCHEDULE_SECURITY;

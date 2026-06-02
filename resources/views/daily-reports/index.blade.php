@@ -123,6 +123,9 @@
         <span class="badge-soft bg-soft-info"><i class="bi bi-people me-1"></i>Total anggota: {{ $summary['total'] }}</span>
         <span class="badge-soft bg-soft-success"><i class="bi bi-check-circle me-1"></i>Sudah kirim: {{ $summary['submitted'] }}</span>
         <span class="badge-soft bg-soft-warning"><i class="bi bi-exclamation-circle me-1"></i>Belum kirim: {{ $summary['missing'] }}</span>
+        @if(($summary['leave'] ?? 0) > 0)
+            <span class="badge-soft bg-soft-info"><i class="bi bi-calendar-heart me-1"></i>Cuti/Sakit: {{ $summary['leave'] }}</span>
+        @endif
     </div>
 @endunless
 
@@ -202,9 +205,10 @@
                         @php
                             $report = $row->report;
                             $member = $row->user;
+                            $leave  = $row->leave ?? null;
                             $rowDate = $report?->report_date ?? \Carbon\Carbon::parse($selectedDate);
                         @endphp
-                        <tr @class(['table-warning' => ! $report])>
+                        <tr @class(['table-warning' => ! $report && ! $leave])>
                             <td class="fw-semibold">{{ $rowDate->translatedFormat('d M Y') }}</td>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
@@ -222,6 +226,12 @@
                             <td>
                                 @if($report)
                                     <span class="badge-soft bg-soft-success"><i class="bi bi-check-circle"></i> Sudah Kirim</span>
+                                @elseif($leave)
+                                    @if($leave->type === \App\Models\Leave::TYPE_SAKIT)
+                                        <span class="badge-soft bg-soft-danger"><i class="bi bi-thermometer-half"></i> {{ $leave->type_label }}</span>
+                                    @else
+                                        <span class="badge-soft bg-soft-info"><i class="bi bi-calendar-heart"></i> {{ $leave->type_label }}</span>
+                                    @endif
                                 @else
                                     <span class="badge-soft bg-soft-warning"><i class="bi bi-exclamation-circle"></i> Belum Kirim</span>
                                 @endif
