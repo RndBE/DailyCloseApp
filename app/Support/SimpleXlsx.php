@@ -6,16 +6,76 @@ class SimpleXlsx
 {
     private array $rows = [];
 
-    public function addRow(array $row, bool $bold = false): static
+    /**
+     * Tambah satu baris.
+     *
+     * @param array      $row   Data sel.
+     * @param bool|array $style true = tebal; atau array opsi:
+     *                          ['bold' => bool, 'fill' => bool, 'wrap' => bool, 'border' => bool].
+     *                          'fill' memberi latar merah muda (penanda libur);
+     *                          'border' memberi garis batas sel (tabel).
+     */
+    public function addRow(array $row, bool|array $style = false): static
     {
-        $this->rows[] = ['data' => $row, 'bold' => $bold];
+        if (is_bool($style)) {
+            $style = ['bold' => $style];
+        }
+
+        $this->rows[] = [
+            'data' => $row,
+            'xf'   => $this->styleIndex($style),
+        ];
+
         return $this;
     }
 
     public function addEmpty(): static
     {
-        $this->rows[] = ['data' => [], 'bold' => false];
+        $this->rows[] = ['data' => [], 'xf' => 0];
         return $this;
+    }
+
+    /**
+     * Petakan kombinasi opsi ke indeks cellXfs di styles.xml.
+     *  0 = normal
+     *  1 = tebal
+     *  2 = wrap (rata atas)
+     *  3 = wrap + latar libur
+     *  4 = tebal + latar libur
+     *  5 = tebal + border (header tabel)
+     *  6 = wrap + border (sel tabel)
+     *  7 = wrap + latar libur + border (sel tabel libur)
+     */
+    private function styleIndex(array $opt): int
+    {
+        $bold   = $opt['bold'] ?? false;
+        $fill   = $opt['fill'] ?? false;
+        $wrap   = $opt['wrap'] ?? false;
+        $border = $opt['border'] ?? false;
+
+        if ($border) {
+            if ($fill) {
+                return 7;
+            }
+            if ($bold) {
+                return 5;
+            }
+            return 6;
+        }
+
+        if ($fill && $bold) {
+            return 4;
+        }
+        if ($fill) {
+            return 3;
+        }
+        if ($bold) {
+            return 1;
+        }
+        if ($wrap) {
+            return 2;
+        }
+        return 0;
     }
 
     public function download(string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
@@ -114,18 +174,24 @@ class SimpleXlsx
     {
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
              . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+             . '<cols>'
+             .   '<col min="1" max="2" width="16" customWidth="1"/>'
+             .   '<col min="3" max="5" width="40" customWidth="1"/>'
+             .   '<col min="6" max="8" width="14" customWidth="1"/>'
+             . '</cols>'
              . '<sheetData>';
 
         foreach ($this->rows as $rowIdx => $row) {
-            $style = $row['bold'] ? ' s="1"' : '';
-            $xml .= '<row r="' . ($rowIdx + 1) . '">';
+            $xf    = $row['xf'];
+            $style = $xf > 0 ? ' s="' . $xf . '"' : '';
+            $xml  .= '<row r="' . ($rowIdx + 1) . '">';
             foreach ($row['data'] as $colIdx => $value) {
                 $ref = $this->colLetter($colIdx) . ($rowIdx + 1);
                 if (is_int($value) || is_float($value)) {
                     $xml .= '<c r="' . $ref . '"' . $style . '><v>' . $value . '</v></c>';
                 } else {
                     $xml .= '<c r="' . $ref . '" t="inlineStr"' . $style . '>'
-                          . '<is><t>' . $this->escape((string) $value) . '</t></is></c>';
+                          . '<is><t xml:space="preserve">' . $this->escape((string) $value) . '</t></is></c>';
                 }
             }
             $xml .= '</row>';
@@ -180,17 +246,31 @@ class SimpleXlsx
              .   '<font><sz val="11"/><name val="Calibri"/></font>'
              .   '<font><b/><sz val="11"/><name val="Calibri"/></font>'
              . '</fonts>'
-             . '<fills count="2">'
+             . '<fills count="3">'
              .   '<fill><patternFill patternType="none"/></fill>'
              .   '<fill><patternFill patternType="gray125"/></fill>'
+             .   '<fill><patternFill patternType="solid"><fgColor rgb="FFFDE7E9"/><bgColor indexed="64"/></patternFill></fill>'
              . '</fills>'
-             . '<borders count="1">'
+             . '<borders count="2">'
              .   '<border><left/><right/><top/><bottom/><diagonal/></border>'
+             .   '<border>'
+             .     '<left style="thin"><color rgb="FFBFBFBF"/></left>'
+             .     '<right style="thin"><color rgb="FFBFBFBF"/></right>'
+             .     '<top style="thin"><color rgb="FFBFBFBF"/></top>'
+             .     '<bottom style="thin"><color rgb="FFBFBFBF"/></bottom>'
+             .     '<diagonal/>'
+             .   '</border>'
              . '</borders>'
              . '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-             . '<cellXfs count="2">'
+             . '<cellXfs count="8">'
              .   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
              .   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+             .   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+             .   '<xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0" applyFill="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+             .   '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+             .   '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+             .   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
+             .   '<xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>'
              . '</cellXfs>'
              . '</styleSheet>';
     }

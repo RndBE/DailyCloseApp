@@ -438,7 +438,52 @@ class DailyReportController extends Controller
             ->where('user_id', $userId)
             ->whereBetween('report_date', [$start->toDateString(), $end->toDateString()])
             ->orderBy('report_date')
-            ->get();
+            ->get()
+            ->keyBy(fn ($r) => $r->report_date->toDateString());
+
+        // Data pendukung agar isi unduhan sama dengan tabel di web.
+        $holidays = Holiday::whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->get()
+            ->keyBy(fn ($h) => $h->date->toDateString());
+
+        $schedule    = $targetUser->work_schedule ?? User::SCHEDULE_5DAYS;
+        $isSecurity  = $schedule === User::SCHEDULE_SECURITY;
+        $holidayDays = $schedule === User::SCHEDULE_6DAYS ? [0] : [0, 6];
+
+        $secSchedule = collect();
+        if ($isSecurity) {
+            $secSchedule = SecuritySchedule::query()
+                ->where('user_id', $userId)
+                ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+                ->get()
+                ->keyBy(fn ($s) => $s->date->toDateString());
+        }
+
+        $today = Carbon::today();
+
+        // Pisahkan teks multi-baris jadi daftar butir, seperti tampilan tabel.
+        $splitCell = function (?string $text): string {
+            if ($text === null || trim($text) === '') {
+                return '';
+            }
+            $result = [];
+            foreach (preg_split('/\r\n|\n|\r/', $text) as $line) {
+                foreach (preg_split('/\s+-\s+/', $line) as $part) {
+                    $part = trim($part, " \t-•·");
+                    if ($part !== '') {
+                        $result[] = $part;
+                    }
+                }
+            }
+            if (empty($result)) {
+                return trim($text);
+            }
+            return count($result) > 1
+                ? implode("\n", array_map(fn ($p) => '• ' . $p, $result))
+                : $result[0];
+        };
+
+        $fmtOt = fn (float $h) => rtrim(rtrim(number_format($h, 1), '0'), '.') . ' jam';
 
         $monthLabel = $start->translatedFormat('F_Y');
         $safeName   = preg_replace('/[^A-Za-z0-9_\-]/', '_', $targetUser->name);
@@ -453,36 +498,85 @@ class DailyReportController extends Controller
         $xlsx->addEmpty();
         $xlsx->addRow([
             'Tanggal',
+            'Hari',
             'Pekerjaan Diselesaikan',
             'Belum Selesai',
             'Hambatan',
-            'Rencana Besok',
             'Jam Selesai',
             'Lembur',
-            'Jam Lembur Mulai',
-            'Jam Lembur Selesai',
-            'Butuh Bantuan',
-            'Keterangan Bantuan',
-            'Sanksi Terlambat',
-            'Catatan Tambahan',
-        ], true);
+            'Sanksi',
+        ], ['bold' => true, 'border' => true]);
 
-        foreach ($reports as $r) {
-            $xlsx->addRow([
-                $r->report_date->translatedFormat('d F Y'),
-                $r->completed_work,
-                $r->unfinished_work ?? '',
-                $r->obstacles ?? '',
-                $r->tomorrow_plan,
-                substr($r->work_finished_at, 0, 5),
-                $r->overtime_status ? 'Ya' : 'Tidak',
-                $r->overtime_start ? substr($r->overtime_start, 0, 5) : '',
-                $r->overtime_end   ? substr($r->overtime_end, 0, 5)   : '',
-                $r->need_leader_help ? 'Ya' : 'Tidak',
-                $r->leader_help_description ?? '',
-                $r->is_late ? 'Ya' : 'Tidak',
-                $r->additional_notes ?? '',
-            ]);
+        $iter = $start->copy();
+        while ($iter->lte($end)) {
+            $dateStr         = $iter->toDateString();
+            $r               = $reports->get($dateStr);
+            $nationalHoliday = $holidays->get($dateStr);
+            $secRow          = $isSecurity ? $secSchedule->get($dateStr) : null;
+
+            // Lembur otomatis security: kelebihan durasi shift 12 jam di atas 8 jam.
+            $autoOt      = ($isSecurity && $secRow && ! $secRow->is_off) ? $secRow->overtimeHours() : 0;
+            $autoOtLabel = $autoOt > 0 ? $fmtOt($autoOt) : '';
+
+            if ($isSecurity) {
+                $isHoliday = $secRow ? $secRow->is_off : false;
+            } else {
+                $isHoliday = in_array($iter->dayOfWeek, $holidayDays, true) || $nationalHoliday !== null;
+            }
+            $isFuture = $iter->gt($today);
+
+            // Kolom "Hari": nama hari + shift security + nama libur nasional.
+            $dayParts = [$iter->translatedFormat('l')];
+            if ($isSecurity && $secRow && ! $secRow->is_off) {
+                $dayParts[] = $secRow->shift_label;
+            }
+            if ($nationalHoliday) {
+                $dayParts[] = $nationalHoliday->name;
+            }
+            $dayCell = implode(' — ', $dayParts);
+
+            $tanggal = $iter->translatedFormat('d M Y');
+
+            // Baris libur/hari besar diberi latar (fill); semua sel diberi border.
+            $rowStyle = ['wrap' => true, 'border' => true, 'fill' => $isHoliday];
+
+            if ($isHoliday && ! $r) {
+                $label = $nationalHoliday ? $nationalHoliday->name : 'Libur';
+                $xlsx->addRow([$tanggal, $dayCell, $label, '', '', '', '', ''], $rowStyle);
+            } elseif (! $r) {
+                $xlsx->addRow([
+                    $tanggal,
+                    $dayCell,
+                    $isFuture ? '' : '—',
+                    '', '', '',
+                    $autoOtLabel,
+                    '',
+                ], $rowStyle);
+            } else {
+                // Kolom Lembur — security: otomatis dari shift; lainnya: rentang jam.
+                if ($isSecurity) {
+                    $lembur = $autoOtLabel;
+                } elseif ($r->overtime_status) {
+                    $lembur = $r->overtime_start
+                        ? substr($r->overtime_start, 0, 5) . ' - ' . substr($r->overtime_end, 0, 5)
+                        : 'Ya';
+                } else {
+                    $lembur = '';
+                }
+
+                $xlsx->addRow([
+                    $tanggal,
+                    $dayCell,
+                    $splitCell($r->completed_work),
+                    $splitCell($r->unfinished_work),
+                    $splitCell($r->obstacles),
+                    substr((string) $r->work_finished_at, 0, 5),
+                    $lembur,
+                    $r->is_late ? 'Sanksi' : '',
+                ], $rowStyle);
+            }
+
+            $iter->addDay();
         }
 
         return $xlsx->download($filename);
