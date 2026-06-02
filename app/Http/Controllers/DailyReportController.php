@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DailyReportRequest;
+use App\Models\CommentNotification;
 use App\Models\DailyReport;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\ReportComment;
 use App\Models\SecuritySchedule;
 use App\Models\User;
 use Carbon\Carbon;
@@ -50,7 +52,7 @@ class DailyReportController extends Controller
         }
 
         $teamQuery->with(['dailyReports' => function ($q) use ($date) {
-            $q->whereDate('report_date', $date);
+            $q->whereDate('report_date', $date)->withCount('comments');
         }]);
 
         $members = $teamQuery
@@ -671,6 +673,7 @@ class DailyReportController extends Controller
 
         $query = DailyReport::query()
             ->with('user')
+            ->withCount('comments')
             ->where('user_id', $user->id);
 
         $this->applyFilters($query, $request, includeUserFilters: false);
@@ -755,9 +758,81 @@ class DailyReportController extends Controller
     {
         abort_unless($dailyReport->isVisibleTo($request->user()), 403, 'Anda tidak berhak melihat laporan ini.');
 
-        $dailyReport->load('user');
+        $dailyReport->load(['user', 'comments.author']);
+
+        // Tandai notifikasi komentar pada laporan ini sebagai sudah dibaca.
+        if ($dailyReport->comments->isNotEmpty()) {
+            CommentNotification::where('user_id', $request->user()->id)
+                ->whereNull('read_at')
+                ->whereIn('report_comment_id', $dailyReport->comments->pluck('id'))
+                ->update(['read_at' => now()]);
+        }
 
         return view('daily-reports.show', ['report' => $dailyReport]);
+    }
+
+    /**
+     * Komentar/masukan atasan pada laporan. Boleh ditulis oleh siapa pun yang
+     * berhak melihat laporan tersebut (atasan dari pemilik laporan, atau pemilik
+     * sebagai balasan).
+     */
+    public function storeComment(Request $request, DailyReport $dailyReport): RedirectResponse
+    {
+        abort_unless($dailyReport->isVisibleTo($request->user()), 403, 'Anda tidak berhak mengomentari laporan ini.');
+
+        $data = $request->validate(
+            ['body' => ['required', 'string', 'max:2000']],
+            ['body.required' => 'Komentar tidak boleh kosong.']
+        );
+
+        $authorId = $request->user()->id;
+
+        $comment = $dailyReport->comments()->create([
+            'user_id' => $authorId,
+            'body'    => $data['body'],
+        ]);
+
+        // Kirim notifikasi ke pemilik laporan & peserta diskusi lain (selain penulis).
+        $recipientIds = collect([$dailyReport->user_id])
+            ->merge($dailyReport->comments()->pluck('user_id'))
+            ->unique()
+            ->reject(fn ($id) => (int) $id === (int) $authorId)
+            ->values();
+
+        foreach ($recipientIds as $recipientId) {
+            CommentNotification::create([
+                'report_comment_id' => $comment->id,
+                'user_id'           => $recipientId,
+            ]);
+        }
+
+        return redirect()->route('daily-reports.show', $dailyReport)
+            ->with('success', 'Komentar berhasil ditambahkan.');
+    }
+
+    public function destroyComment(Request $request, ReportComment $comment): RedirectResponse
+    {
+        abort_unless(
+            $request->user()->isSuperAdmin() || $comment->user_id === $request->user()->id,
+            403,
+            'Anda hanya bisa menghapus komentar sendiri.'
+        );
+
+        $reportId = $comment->daily_report_id;
+        $comment->delete();
+
+        return redirect()->route('daily-reports.show', $reportId)
+            ->with('success', 'Komentar dihapus.');
+    }
+
+    /** Tandai semua notifikasi komentar milik user sebagai sudah dibaca. */
+    public function markNotificationsRead(Request $request): RedirectResponse
+    {
+        CommentNotification::where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return back()->with('success', 'Semua notifikasi ditandai sudah dibaca.');
     }
 
     public function edit(Request $request, DailyReport $dailyReport): View

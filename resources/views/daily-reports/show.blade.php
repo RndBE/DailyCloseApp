@@ -2,6 +2,34 @@
 
 @section('title', 'Detail Laporan')
 
+@push('styles')
+<style>
+    .chat-bubble {
+        padding: .55rem .8rem;
+        border-radius: 14px;
+        white-space: pre-wrap;
+        line-height: 1.5;
+        font-size: .9rem;
+        word-break: break-word;
+    }
+    .chat-bubble-them {
+        background: var(--bg-soft);
+        color: var(--ink-900);
+        border: 1px solid var(--line);
+        border-top-left-radius: 4px;
+    }
+    .chat-bubble-me {
+        background: var(--brand-600);
+        color: #fff;
+        border-top-right-radius: 4px;
+    }
+    .avatar-me {
+        background: var(--brand-600);
+        color: #fff;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
     <div>
@@ -156,6 +184,86 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Komentar / masukan atasan --}}
+<div class="row g-3 mt-1" id="komentar">
+    <div class="col-12 col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-chat-left-text me-2 text-primary"></i>Komentar &amp; Masukan</span>
+                <span class="badge-soft bg-soft-primary">{{ $report->comments->count() }}</span>
+            </div>
+            <div class="card-body">
+                @if($report->user_id === auth()->id() && $report->comments->isNotEmpty())
+                    <div class="alert border-0 d-flex align-items-center mb-3" role="alert"
+                         style="background:#fff5e6; color:#b15c00; border-radius:12px;">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <div class="small">Atasan memberi masukan pada laporan ini. Mohon diperhatikan untuk perbaikan.</div>
+                    </div>
+                @endif
+
+                {{-- Daftar komentar — gaya percakapan (chat) --}}
+                @forelse($report->comments as $comment)
+                    @php $mine = $comment->user_id === auth()->id(); @endphp
+                    <div class="d-flex gap-2 mb-3 {{ $mine ? 'flex-row-reverse' : '' }}">
+                        <div class="avatar {{ $mine ? 'avatar-me' : '' }}" style="width:36px;height:36px;flex:0 0 36px">
+                            {{ strtoupper(substr($comment->author->name ?? '?', 0, 1)) }}
+                        </div>
+                        <div style="max-width:78%">
+                            {{-- Nama + level --}}
+                            <div class="small mb-1 {{ $mine ? 'text-end' : '' }}">
+                                <span class="fw-semibold">{{ $mine ? 'Anda' : ($comment->author->name ?? 'Pengguna') }}</span>
+                                @if($comment->author->level_name)
+                                    <span class="text-muted ms-1">{{ $comment->author->level_name }}</span>
+                                @endif
+                            </div>
+                            {{-- Gelembung pesan --}}
+                            <div class="chat-bubble {{ $mine ? 'chat-bubble-me' : 'chat-bubble-them' }}">{{ $comment->body }}</div>
+                            {{-- Waktu + aksi --}}
+                            <div class="d-flex align-items-center gap-2 mt-1 {{ $mine ? 'justify-content-end' : '' }}">
+                                <span class="text-muted" style="font-size:.72rem">{{ $comment->created_at->translatedFormat('d M Y, H:i') }}</span>
+                                @if(auth()->user()->isSuperAdmin() || $mine)
+                                    <form action="{{ route('daily-reports.comments.destroy', $comment) }}" method="POST"
+                                          onsubmit="return confirm('Hapus komentar ini?');" class="d-inline">
+                                        @csrf @method('DELETE')
+                                        <button class="btn btn-sm btn-link text-danger p-0" title="Hapus" style="font-size:.72rem">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <p class="text-muted text-center mb-3 py-2">
+                        <i class="bi bi-chat-left me-1"></i>Belum ada komentar.
+                    </p>
+                @endforelse
+
+                {{-- Form tambah komentar --}}
+                <form action="{{ route('daily-reports.comments.store', $report) }}" method="POST" class="mt-2">
+                    @csrf
+                    <label class="form-label">
+                        @if($report->user_id === auth()->id())
+                            Tambah balasan
+                        @else
+                            Tambah masukan untuk {{ $report->user->name }}
+                        @endif
+                    </label>
+                    <textarea name="body" rows="3"
+                              class="form-control @error('body') is-invalid @enderror"
+                              placeholder="Tulis komentar atau masukan perbaikan…" required>{{ old('body') }}</textarea>
+                    @error('body') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    <div class="text-end mt-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-send me-1"></i>Kirim Komentar
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

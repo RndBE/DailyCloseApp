@@ -321,6 +321,68 @@
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <span class="d-none d-md-inline text-muted small">{{ now()->translatedFormat('l, d F Y') }}</span>
+
+                    {{-- Notifikasi komentar --}}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary position-relative border-0 p-2" type="button"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifikasi">
+                            <i class="bi bi-bell" style="font-size:1.15rem"></i>
+                            @if(($navNotifUnread ?? 0) > 0)
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+                                      style="background:var(--brand-600); font-size:.62rem">
+                                    {{ $navNotifUnread > 9 ? '9+' : $navNotifUnread }}
+                                    <span class="visually-hidden">notifikasi belum dibaca</span>
+                                </span>
+                            @endif
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end shadow-sm border-0 p-0"
+                             style="border:1px solid var(--line) !important; border-radius:12px; width:340px; max-width:90vw; overflow:hidden;">
+                            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+                                <span class="fw-semibold small">Notifikasi Komentar</span>
+                                @if(($navNotifUnread ?? 0) > 0)
+                                    <form method="POST" action="{{ route('notifications.read-all') }}">
+                                        @csrf
+                                        <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size:.78rem">
+                                            Tandai semua dibaca
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                            <div style="max-height:360px; overflow-y:auto">
+                                @forelse($navNotifs ?? [] as $notif)
+                                    @php $c = $notif->comment; @endphp
+                                    @continue(! $c)
+                                    <a href="{{ route('daily-reports.show', $c->daily_report_id) }}#komentar"
+                                       class="dropdown-item d-flex gap-2 px-3 py-2 border-bottom"
+                                       style="white-space:normal; {{ $notif->read_at ? '' : 'background:var(--brand-50);' }}">
+                                        <div class="avatar" style="width:34px;height:34px;flex:0 0 34px">
+                                            {{ strtoupper(substr($c->author->name ?? '?', 0, 1)) }}
+                                        </div>
+                                        <div class="flex-grow-1" style="min-width:0">
+                                            <div class="small">
+                                                <span class="fw-semibold">{{ $c->author->name ?? 'Pengguna' }}</span>
+                                                memberi komentar
+                                                @if($c->report && $c->report->report_date)
+                                                    pada laporan {{ $c->report->report_date->translatedFormat('d M Y') }}
+                                                @endif
+                                            </div>
+                                            <div class="text-muted text-truncate" style="font-size:.78rem">{{ \Illuminate\Support\Str::limit($c->body, 60) }}</div>
+                                            <div class="text-muted" style="font-size:.7rem">{{ $notif->created_at->diffForHumans() }}</div>
+                                        </div>
+                                        @unless($notif->read_at)
+                                            <span class="rounded-circle align-self-center" style="width:8px;height:8px;flex:0 0 8px;background:var(--brand-600)"></span>
+                                        @endunless
+                                    </a>
+                                @empty
+                                    <div class="text-center text-muted small py-4">
+                                        <i class="bi bi-bell-slash d-block mb-1" style="font-size:1.3rem"></i>
+                                        Belum ada notifikasi.
+                                    </div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="dropdown">
                         <button class="user-chip border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="avatar">{{ strtoupper(substr(auth()->user()->name,0,1)) }}</div>

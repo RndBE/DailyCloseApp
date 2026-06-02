@@ -151,7 +151,14 @@
                 @if($isMine)
                     @forelse($reports as $r)
                         <tr>
-                            <td class="fw-semibold">{{ $r->report_date->translatedFormat('d M Y') }}</td>
+                            <td class="fw-semibold">
+                                {{ $r->report_date->translatedFormat('d M Y') }}
+                                @if(($r->comments_count ?? 0) > 0)
+                                    <a href="{{ route('daily-reports.show', $r) }}#komentar" class="badge-soft bg-soft-primary text-decoration-none ms-1" title="Ada masukan atasan">
+                                        <i class="bi bi-chat-left-text"></i> {{ $r->comments_count }}
+                                    </a>
+                                @endif
+                            </td>
                             <td>
                                 @if($r->overtime_status)
                                     <span class="badge-soft bg-soft-warning"><i class="bi bi-stopwatch"></i> Ya</span>
@@ -226,6 +233,11 @@
                             <td>
                                 @if($report)
                                     <span class="badge-soft bg-soft-success"><i class="bi bi-check-circle"></i> Sudah Kirim</span>
+                                    @if(($report->comments_count ?? 0) > 0)
+                                        <a href="{{ route('daily-reports.show', $report) }}#komentar" class="badge-soft bg-soft-primary text-decoration-none ms-1" title="Sudah ada komentar">
+                                            <i class="bi bi-chat-left-text"></i> {{ $report->comments_count }}
+                                        </a>
+                                    @endif
                                 @elseif($leave)
                                     @if($leave->type === \App\Models\Leave::TYPE_SAKIT)
                                         <span class="badge-soft bg-soft-danger"><i class="bi bi-thermometer-half"></i> {{ $leave->type_label }}</span>

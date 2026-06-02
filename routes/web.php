@@ -31,6 +31,9 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('daily-reports/laporan-bulanan', [DailyReportController::class, 'laporanBulanan'])->name('daily-reports.bulanan');
     Route::get('daily-reports/laporan-bulanan/cetak', [DailyReportController::class, 'laporanBulananCetak'])->name('daily-reports.bulanan.cetak');
     Route::get('daily-reports/laporan-bulanan/download', [DailyReportController::class, 'laporanBulananDownload'])->name('daily-reports.bulanan.download');
+    Route::post('daily-reports/{dailyReport}/comments', [DailyReportController::class, 'storeComment'])->name('daily-reports.comments.store');
+    Route::delete('report-comments/{comment}', [DailyReportController::class, 'destroyComment'])->name('daily-reports.comments.destroy');
+    Route::post('notifications/read-all', [DailyReportController::class, 'markNotificationsRead'])->name('notifications.read-all');
     Route::resource('daily-reports', DailyReportController::class);
 
     Route::get('cuti', [LeaveController::class, 'index'])->name('leaves.index');
