@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\CommentNotification;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -22,6 +23,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Gunakan markup pagination Bootstrap 5 agar sesuai tema (default Laravel = Tailwind).
+        Paginator::useBootstrapFive();
+
         // Suplai data notifikasi komentar ke topbar pada setiap halaman.
         View::composer('layouts.app', function ($view) {
             $user = Auth::user();
