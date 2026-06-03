@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckUserActive;
 use App\Http\Middleware\EnsureCanManageUsers;
+use App\Http\Middleware\SetActiveCompany;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => CheckUserActive::class,
             'manage.users' => EnsureCanManageUsers::class,
+            'company' => SetActiveCompany::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

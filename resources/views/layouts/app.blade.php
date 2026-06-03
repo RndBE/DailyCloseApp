@@ -386,6 +386,31 @@
                         </div>
                     </div>
 
+                    @if(($isGlobalAdmin ?? false) && ($switchCompanies ?? collect())->isNotEmpty())
+                        <div class="dropdown">
+                            <button class="user-chip border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Ganti perusahaan aktif">
+                                <i class="bi bi-buildings text-primary"></i>
+                                <span class="d-none d-md-inline fw-semibold small">{{ $activeCompany->name ?? 'Pilih Perusahaan' }}</span>
+                                <i class="bi bi-chevron-down small text-muted"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="border:1px solid var(--line) !important; border-radius:12px;">
+                                <li class="px-3 py-2 small text-muted">Perusahaan aktif</li>
+                                @foreach($switchCompanies as $company)
+                                    <li>
+                                        <form method="POST" action="{{ route('company.switch') }}">
+                                            @csrf
+                                            <input type="hidden" name="company_id" value="{{ $company->id }}">
+                                            <button type="submit" class="dropdown-item d-flex align-items-center gap-2 {{ optional($activeCompany)->id === $company->id ? 'fw-semibold text-primary' : '' }}">
+                                                <i class="bi {{ optional($activeCompany)->id === $company->id ? 'bi-check-circle-fill' : 'bi-circle' }}"></i>
+                                                {{ $company->name }}
+                                            </button>
+                                        </form>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div class="dropdown">
                         <button class="user-chip border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="avatar">{{ strtoupper(substr(auth()->user()->name,0,1)) }}</div>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,8 @@ use Illuminate\Support\Collection;
 
 class Leave extends Model
 {
+    use BelongsToCompany;
+
     public const TYPE_CUTI  = 'cuti';
     public const TYPE_SAKIT = 'sakit';
 
@@ -19,6 +22,7 @@ class Leave extends Model
     ];
 
     protected $fillable = [
+        'company_id',
         'user_id',
         'type',
         'start_date',

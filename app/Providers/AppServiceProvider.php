@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\CommentNotification;
+use App\Models\Company;
+use App\Support\CompanyContext;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
@@ -34,6 +36,16 @@ class AppServiceProvider extends ServiceProvider
                 $view->with(['navNotifs' => collect(), 'navNotifUnread' => 0]);
                 return;
             }
+
+            // Data switcher perusahaan untuk topbar.
+            $isGlobalAdmin = $user->isGlobalAdmin();
+            $view->with([
+                'isGlobalAdmin'  => $isGlobalAdmin,
+                'activeCompany'  => CompanyContext::id() ? Company::find(CompanyContext::id()) : null,
+                'switchCompanies' => $isGlobalAdmin
+                    ? Company::where('is_active', true)->orderBy('id')->get()
+                    : collect(),
+            ]);
 
             $navNotifs = CommentNotification::where('user_id', $user->id)
                 ->with(['comment.author', 'comment.report'])

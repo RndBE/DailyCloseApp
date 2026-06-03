@@ -29,11 +29,30 @@ class UserRequest extends FormRequest
             true
         );
 
+        // "Global" dikirim sebagai string kosong → normalkan jadi null.
+        $companyId = $this->input('company_id');
+        $companyId = ($companyId === '' || $companyId === null) ? null : (int) $companyId;
+
         $this->merge([
             'is_active' => $this->boolean('is_active'),
             'is_super_admin' => $this->boolean('is_super_admin'),
             'managed_divisions' => $supportsManaged ? $managed : null,
+            'company_id' => $companyId,
         ]);
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            // "Global" (company_id null) hanya boleh untuk Super Admin, agar tidak
+            // tercipta user lintas perusahaan yang justru terkunci dari semua data.
+            if (is_null($this->input('company_id')) && ! $this->boolean('is_super_admin')) {
+                $validator->errors()->add(
+                    'company_id',
+                    'Perusahaan "Global" hanya untuk Super Admin. Centang Peran Super Admin atau pilih salah satu perusahaan.'
+                );
+            }
+        });
     }
 
     public function rules(): array
@@ -47,6 +66,8 @@ class UserRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            // Hanya super-admin global yang memilih perusahaan; lainnya dikunci di controller.
+            'company_id' => ['nullable', 'integer', Rule::exists('companies', 'id')],
             'password' => $passwordRule,
             'level' => ['required', 'integer', Rule::in([1, 2, 3, 4])],
             'is_super_admin' => ['required', 'boolean'],

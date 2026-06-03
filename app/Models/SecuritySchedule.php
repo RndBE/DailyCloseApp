@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SecuritySchedule extends Model
 {
+    use BelongsToCompany;
+
     /**
      * Pilihan shift yang valid: kode => detail.
      * Shift malam (night12 / s3) melewati tengah malam (end < start).
@@ -21,6 +24,7 @@ class SecuritySchedule extends Model
     ];
 
     protected $fillable = [
+        'company_id',
         'user_id',
         'date',
         'start_time',

@@ -69,6 +69,9 @@
                                 @if($u->is_super_admin)
                                     <span class="badge-soft" style="background:#fdecec;color:#b02a37"><i class="bi bi-shield-lock"></i> Super Admin</span>
                                 @endif
+                                @if(is_null($u->company_id))
+                                    <span class="badge-soft" style="background:#eef2ff;color:#4f46e5"><i class="bi bi-globe2"></i> Global</span>
+                                @endif
                             </div>
                         </td>
                         <td class="small">

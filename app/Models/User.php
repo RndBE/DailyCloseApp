@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -9,7 +10,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use BelongsToCompany, HasFactory, Notifiable;
 
     public const LEVEL_OWNER = 1;
 
@@ -96,6 +97,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'company_id',
         'level',
         'is_super_admin',
         'division',
@@ -158,6 +160,27 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return (bool) $this->is_super_admin;
+    }
+
+    /**
+     * Super-admin global = lintas perusahaan (company_id null).
+     * Hanya akun seperti ini yang melihat switcher perusahaan & bisa berpindah.
+     */
+    public function isGlobalAdmin(): bool
+    {
+        return $this->isSuperAdmin() && is_null($this->company_id);
+    }
+
+    /**
+     * Route-model-binding tanpa company scope. Visibilitas (perusahaan aktif +
+     * admin global) ditegakkan di UserController::assertCanManage, sehingga admin
+     * global tetap bisa membuka/mengelola akun global (company_id null).
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return $this->withoutGlobalScopes()
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->firstOrFail();
     }
 
     public function canManageUsers(): bool

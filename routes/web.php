@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DailyReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HolidayController;
@@ -17,8 +18,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
 });
 
-Route::middleware(['auth', 'active'])->group(function () {
+Route::middleware(['auth', 'active', 'company'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Pindah perusahaan aktif (hanya super-admin global).
+    Route::post('/switch-company', [CompanyController::class, 'switch'])->name('company.switch');
 
     Route::get('/password', [AuthController::class, 'editPassword'])->name('password.edit');
     Route::put('/password', [AuthController::class, 'updatePassword'])->name('password.update');

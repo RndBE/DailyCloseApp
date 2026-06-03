@@ -88,6 +88,24 @@
     <div class="card-header"><i class="bi bi-person me-2 text-muted"></i>Data User</div>
     <div class="card-body">
         <div class="row g-3">
+            @if(auth()->user()->isGlobalAdmin())
+                <div class="col-12">
+                    <label class="form-label">Perusahaan <span class="text-danger">*</span></label>
+                    @php
+                        // Untuk user baru default ke perusahaan aktif; user lama pakai nilainya
+                        // (null = Global). old() menang setelah error validasi.
+                        $currentCompany = old('company_id', $user->exists ? $user->company_id : \App\Support\CompanyContext::id());
+                        $isGlobalSel = ($currentCompany === null || $currentCompany === '');
+                    @endphp
+                    <select name="company_id" class="form-select">
+                        @foreach($companies as $c)
+                            <option value="{{ $c->id }}" @selected((string) $currentCompany === (string) $c->id)>{{ $c->name }}</option>
+                        @endforeach
+                        <option value="" @selected($isGlobalSel)>★ Global (semua perusahaan)</option>
+                    </select>
+                    <div class="form-text">Pilih perusahaan, atau <strong>Global</strong> untuk admin lintas perusahaan (wajib Super Admin).</div>
+                </div>
+            @endif
             <div class="col-md-6">
                 <label class="form-label">Nama Lengkap <span class="text-danger">*</span></label>
                 <input type="text" name="name" value="{{ old('name', $user->name) }}" class="form-control" required>
