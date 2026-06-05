@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthenticateMobileToken;
 use App\Http\Middleware\CheckUserActive;
 use App\Http\Middleware\EnsureCanManageUsers;
 use App\Http\Middleware\SetActiveCompany;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => route('login'));
         $middleware->alias([
             'active' => CheckUserActive::class,
+            'mobile.token' => AuthenticateMobileToken::class,
             'manage.users' => EnsureCanManageUsers::class,
             'company' => SetActiveCompany::class,
         ]);

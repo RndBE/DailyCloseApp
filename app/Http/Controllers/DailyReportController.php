@@ -10,11 +10,13 @@ use App\Models\Leave;
 use App\Models\ReportComment;
 use App\Models\SecuritySchedule;
 use App\Models\User;
+use App\Support\SimpleXlsx;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class DailyReportController extends Controller
@@ -107,9 +109,9 @@ class DailyReportController extends Controller
      * Query users yang dikelola oleh user yang login (sebagai "tim").
      * Mengikuti aturan yang sama dengan DailyReport::scopeVisibleTo.
      */
-    private function managerRowsQuery(User $user, string $date): \Illuminate\Support\Collection
+    private function managerRowsQuery(User $user, string $date): Collection
     {
-        if (!$user->isSuperAdmin() && !in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER], true)) {
+        if (! $user->isSuperAdmin() && ! in_array($user->level, [User::LEVEL_OWNER, User::LEVEL_MANAGER], true)) {
             return collect();
         }
 
@@ -117,7 +119,7 @@ class DailyReportController extends Controller
             ->where('is_active', true)
             ->where('level', User::LEVEL_MANAGER);
 
-        if (!$user->isSuperAdmin() && $user->level !== User::LEVEL_OWNER) {
+        if (! $user->isSuperAdmin() && $user->level !== User::LEVEL_OWNER) {
             $divisions = $user->visibleDivisions() ?? [];
             if (empty($divisions)) {
                 return collect();
@@ -136,9 +138,9 @@ class DailyReportController extends Controller
             ->keyBy('user_id');
 
         return $managers->map(fn ($m) => (object) [
-            'user'   => $m,
+            'user' => $m,
             'report' => $m->dailyReports->first(),
-            'leave'  => $leaveByUser->get($m->id),
+            'leave' => $leaveByUser->get($m->id),
         ]);
     }
 
@@ -221,18 +223,18 @@ class DailyReportController extends Controller
         $rows = $members
             ->filter(fn ($m) => $m->level !== User::LEVEL_MANAGER)
             ->map(fn ($member) => (object) [
-                'user'   => $member,
+                'user' => $member,
                 'report' => $member->dailyReports->first(),
-                'leave'  => $leaveByUser->get($member->id),
+                'leave' => $leaveByUser->get($member->id),
             ]);
 
         // Leader includes their own report alongside their team's reports
         if ($user->level === User::LEVEL_LEADER) {
             $selfReport = DailyReport::where('user_id', $user->id)->whereDate('report_date', $date)->first();
             $rows = collect([(object) [
-                'user'   => $user,
+                'user' => $user,
                 'report' => $selfReport,
-                'leave'  => $leaveByUser->get($user->id),
+                'leave' => $leaveByUser->get($user->id),
             ]])->merge($rows);
         }
 
@@ -242,19 +244,19 @@ class DailyReportController extends Controller
 
         $allRows = $rows->values()->merge($managerRows);
         $totalStats = [
-            'total'     => $allRows->count(),
+            'total' => $allRows->count(),
             'submitted' => $allRows->filter(fn ($r) => $r->report)->count(),
-            'missing'   => $allRows->filter(fn ($r) => ! $r->report && ! ($r->leave ?? null))->count(),
-            'leave'     => $allRows->filter(fn ($r) => ! $r->report && ($r->leave ?? null))->count(),
-            'overtime'  => $allRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
-            'help'      => $allRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
-            'late'      => $allRows->filter(fn ($r) => $r->report?->is_late)->count(),
+            'missing' => $allRows->filter(fn ($r) => ! $r->report && ! ($r->leave ?? null))->count(),
+            'leave' => $allRows->filter(fn ($r) => ! $r->report && ($r->leave ?? null))->count(),
+            'overtime' => $allRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
+            'help' => $allRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
+            'late' => $allRows->filter(fn ($r) => $r->report?->is_late)->count(),
         ];
 
         return view('daily-reports.rangkuman', [
-            'byDivision'   => $byDivision,
-            'managerRows'  => $managerRows,
-            'totalStats'   => $totalStats,
+            'byDivision' => $byDivision,
+            'managerRows' => $managerRows,
+            'totalStats' => $totalStats,
             'selectedDate' => $date,
         ]);
     }
@@ -291,17 +293,17 @@ class DailyReportController extends Controller
         $rows = $members
             ->filter(fn ($m) => $m->level !== User::LEVEL_MANAGER)
             ->map(fn ($member) => (object) [
-                'user'   => $member,
+                'user' => $member,
                 'report' => $member->dailyReports->first(),
-                'leave'  => $leaveByUser->get($member->id),
+                'leave' => $leaveByUser->get($member->id),
             ]);
 
         if ($user->level === User::LEVEL_LEADER) {
             $selfReport = DailyReport::where('user_id', $user->id)->whereDate('report_date', $date)->first();
             $rows = collect([(object) [
-                'user'   => $user,
+                'user' => $user,
                 'report' => $selfReport,
-                'leave'  => $leaveByUser->get($user->id),
+                'leave' => $leaveByUser->get($user->id),
             ]])->merge($rows);
         }
 
@@ -311,21 +313,21 @@ class DailyReportController extends Controller
 
         $allRows = $rows->values()->merge($managerRows);
         $totalStats = [
-            'total'     => $allRows->count(),
+            'total' => $allRows->count(),
             'submitted' => $allRows->filter(fn ($r) => $r->report)->count(),
-            'missing'   => $allRows->filter(fn ($r) => ! $r->report && ! ($r->leave ?? null))->count(),
-            'leave'     => $allRows->filter(fn ($r) => ! $r->report && ($r->leave ?? null))->count(),
-            'overtime'  => $allRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
-            'help'      => $allRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
-            'late'      => $allRows->filter(fn ($r) => $r->report?->is_late)->count(),
+            'missing' => $allRows->filter(fn ($r) => ! $r->report && ! ($r->leave ?? null))->count(),
+            'leave' => $allRows->filter(fn ($r) => ! $r->report && ($r->leave ?? null))->count(),
+            'overtime' => $allRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
+            'help' => $allRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
+            'late' => $allRows->filter(fn ($r) => $r->report?->is_late)->count(),
         ];
 
         return view('daily-reports.rangkuman-cetak', [
-            'byDivision'   => $byDivision,
-            'managerRows'  => $managerRows,
-            'totalStats'   => $totalStats,
+            'byDivision' => $byDivision,
+            'managerRows' => $managerRows,
+            'totalStats' => $totalStats,
             'selectedDate' => $date,
-            'generatedBy'  => $user->name,
+            'generatedBy' => $user->name,
         ]);
     }
 
@@ -333,13 +335,13 @@ class DailyReportController extends Controller
     {
         $user = $request->user();
 
-        $year  = (int) $request->input('year',  now()->year);
+        $year = (int) $request->input('year', now()->year);
         $month = (int) $request->input('month', now()->month);
-        $year  = max(2020, min((int) now()->year + 1, $year));
+        $year = max(2020, min((int) now()->year + 1, $year));
         $month = max(1, min(12, $month));
 
         $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $end   = $start->copy()->endOfMonth();
+        $end = $start->copy()->endOfMonth();
         $totalDays = $start->daysInMonth;
 
         // Ambil semua anggota yang visible
@@ -390,7 +392,7 @@ class DailyReportController extends Controller
         $rows = $members->map(function ($member) use ($reports, $totalDays, $securitySchedules, $holidays, $leaveMap) {
             $userReports = $reports->get($member->id, collect());
 
-            $isSecurity    = $member->work_schedule === User::SCHEDULE_SECURITY;
+            $isSecurity = $member->work_schedule === User::SCHEDULE_SECURITY;
             $effectiveDays = $totalDays;
             $overtimeCount = $userReports->where('overtime_status', true)->count();
             $overtimeHours = null;
@@ -426,7 +428,7 @@ class DailyReportController extends Controller
                 $holidayDays = $member->work_schedule === User::SCHEDULE_6DAYS ? [0] : [0, 6];
                 $leaveWorkdays = 0;
                 foreach ($memberLeaves as $dateStr => $lv) {
-                    $d = \Carbon\Carbon::parse($dateStr);
+                    $d = Carbon::parse($dateStr);
                     $isWeekend = in_array($d->dayOfWeek, $holidayDays, true);
                     $isNational = $holidays->get($dateStr) !== null;
                     if (! $isWeekend && ! $isNational) {
@@ -437,42 +439,42 @@ class DailyReportController extends Controller
             }
 
             return (object) [
-                'user'           => $member,
-                'reports'        => $userReports,
-                'submitted'      => $userReports->count(),
-                'total_days'     => $effectiveDays,
-                'overtime'       => $overtimeCount,
+                'user' => $member,
+                'reports' => $userReports,
+                'submitted' => $userReports->count(),
+                'total_days' => $effectiveDays,
+                'overtime' => $overtimeCount,
                 'overtime_hours' => $overtimeHours,
-                'need_help'      => $userReports->where('need_leader_help', true)->count(),
-                'late'           => $userReports->where('is_late', true)->count(),
-                'leave'          => count($memberLeaves),
-                'missing'        => max(0, $effectiveDays - $userReports->count()),
+                'need_help' => $userReports->where('need_leader_help', true)->count(),
+                'late' => $userReports->where('is_late', true)->count(),
+                'leave' => count($memberLeaves),
+                'missing' => max(0, $effectiveDays - $userReports->count()),
             ];
         });
 
         $byDivision = $rows->groupBy(fn ($r) => $r->user->division ?? 'Tanpa Divisi');
 
         $totalStats = [
-            'members'   => $rows->count(),
+            'members' => $rows->count(),
             'submitted' => $rows->sum('submitted'),
-            'overtime'  => $rows->sum('overtime'),
+            'overtime' => $rows->sum('overtime'),
             'need_help' => $rows->sum('need_help'),
-            'late'      => $rows->sum('late'),
-            'leave'     => $rows->sum('leave'),
+            'late' => $rows->sum('late'),
+            'leave' => $rows->sum('leave'),
         ];
 
         return [
-            'byDivision'  => $byDivision,
-            'totalStats'  => $totalStats,
-            'year'        => $year,
-            'month'       => $month,
-            'monthLabel'  => $start->translatedFormat('F Y'),
-            'totalDays'   => $totalDays,
-            'startDate'   => $start,
-            'endDate'     => $end,
-            'holidays'    => $holidays,
+            'byDivision' => $byDivision,
+            'totalStats' => $totalStats,
+            'year' => $year,
+            'month' => $month,
+            'monthLabel' => $start->translatedFormat('F Y'),
+            'totalDays' => $totalDays,
+            'startDate' => $start,
+            'endDate' => $end,
+            'holidays' => $holidays,
             'securitySchedules' => $securitySchedules,
-            'leaves'      => $leaveMap,
+            'leaves' => $leaveMap,
             'generatedBy' => $user->name,
         ];
     }
@@ -490,9 +492,9 @@ class DailyReportController extends Controller
     public function laporanBulananDownload(Request $request)
     {
         $authUser = $request->user();
-        $userId   = (int) $request->input('user_id');
-        $year     = (int) $request->input('year',  now()->year);
-        $month    = (int) $request->input('month', now()->month);
+        $userId = (int) $request->input('user_id');
+        $year = (int) $request->input('year', now()->year);
+        $month = (int) $request->input('month', now()->month);
 
         $targetUser = User::findOrFail($userId);
 
@@ -502,7 +504,7 @@ class DailyReportController extends Controller
         abort_unless($allowed, 403);
 
         $start = Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $end   = $start->copy()->endOfMonth();
+        $end = $start->copy()->endOfMonth();
 
         $reports = DailyReport::query()
             ->where('user_id', $userId)
@@ -516,8 +518,8 @@ class DailyReportController extends Controller
             ->get()
             ->keyBy(fn ($h) => $h->date->toDateString());
 
-        $schedule    = $targetUser->work_schedule ?? User::SCHEDULE_5DAYS;
-        $isSecurity  = $schedule === User::SCHEDULE_SECURITY;
+        $schedule = $targetUser->work_schedule ?? User::SCHEDULE_5DAYS;
+        $isSecurity = $schedule === User::SCHEDULE_SECURITY;
         $holidayDays = $schedule === User::SCHEDULE_6DAYS ? [0] : [0, 6];
 
         $secSchedule = collect();
@@ -552,18 +554,19 @@ class DailyReportController extends Controller
             if (empty($result)) {
                 return trim($text);
             }
+
             return count($result) > 1
-                ? implode("\n", array_map(fn ($p) => '• ' . $p, $result))
+                ? implode("\n", array_map(fn ($p) => '• '.$p, $result))
                 : $result[0];
         };
 
-        $fmtOt = fn (float $h) => rtrim(rtrim(number_format($h, 1), '0'), '.') . ' jam';
+        $fmtOt = fn (float $h) => rtrim(rtrim(number_format($h, 1), '0'), '.').' jam';
 
         $monthLabel = $start->translatedFormat('F_Y');
-        $safeName   = preg_replace('/[^A-Za-z0-9_\-]/', '_', $targetUser->name);
-        $filename   = "laporan_{$safeName}_{$monthLabel}.xlsx";
+        $safeName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $targetUser->name);
+        $filename = "laporan_{$safeName}_{$monthLabel}.xlsx";
 
-        $xlsx = new \App\Support\SimpleXlsx();
+        $xlsx = new SimpleXlsx;
 
         $xlsx->addRow(['Nama',    $targetUser->name], true);
         $xlsx->addRow(['Level',   $targetUser->level_name], true);
@@ -583,13 +586,13 @@ class DailyReportController extends Controller
 
         $iter = $start->copy();
         while ($iter->lte($end)) {
-            $dateStr         = $iter->toDateString();
-            $r               = $reports->get($dateStr);
+            $dateStr = $iter->toDateString();
+            $r = $reports->get($dateStr);
             $nationalHoliday = $holidays->get($dateStr);
-            $secRow          = $isSecurity ? $secSchedule->get($dateStr) : null;
+            $secRow = $isSecurity ? $secSchedule->get($dateStr) : null;
 
             // Lembur otomatis security: kelebihan durasi shift 12 jam di atas 8 jam.
-            $autoOt      = ($isSecurity && $secRow && ! $secRow->is_off) ? $secRow->overtimeHours() : 0;
+            $autoOt = ($isSecurity && $secRow && ! $secRow->is_off) ? $secRow->overtimeHours() : 0;
             $autoOtLabel = $autoOt > 0 ? $fmtOt($autoOt) : '';
 
             if ($isSecurity) {
@@ -611,7 +614,7 @@ class DailyReportController extends Controller
 
             $tanggal = $iter->translatedFormat('d M Y');
 
-            $leave      = $memberLeaves[$dateStr] ?? null;
+            $leave = $memberLeaves[$dateStr] ?? null;
             $isLeaveDay = $leave && ! $r && ! $isHoliday;
 
             // Baris libur/hari besar diberi latar; baris cuti/sakit latar tersendiri.
@@ -623,7 +626,7 @@ class DailyReportController extends Controller
                 $label = $nationalHoliday ? $nationalHoliday->name : 'Libur';
                 $xlsx->addRow([$tanggal, $dayCell, $label, '', '', '', '', ''], $rowStyle);
             } elseif ($isLeaveDay) {
-                $label = $leave->type_label . ($leave->reason ? ' — ' . $leave->reason : '');
+                $label = $leave->type_label.($leave->reason ? ' — '.$leave->reason : '');
                 $xlsx->addRow([$tanggal, $dayCell, $label, '', '', '', '', ''], $rowStyle);
             } elseif (! $r) {
                 $xlsx->addRow([
@@ -640,7 +643,7 @@ class DailyReportController extends Controller
                     $lembur = $autoOtLabel;
                 } elseif ($r->overtime_status) {
                     $lembur = $r->overtime_start
-                        ? substr($r->overtime_start, 0, 5) . ' - ' . substr($r->overtime_end, 0, 5)
+                        ? substr($r->overtime_start, 0, 5).' - '.substr($r->overtime_end, 0, 5)
                         : 'Ya';
                 } else {
                     $lembur = '';
@@ -732,6 +735,7 @@ class DailyReportController extends Controller
         }
 
         $user = $request->user();
+        $data['is_late'] = false;
 
         // Tidak ada sanksi keterlambatan bila tanggal laporan adalah hari cuti/sakit.
         $reportDate = Carbon::parse($data['report_date'])->toDateString();
@@ -739,7 +743,10 @@ class DailyReportController extends Controller
             ->overlapping($reportDate, $reportDate)
             ->exists();
 
-        if (! $onLeave && in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true) && now()->hour >= 21) {
+        if (! $onLeave
+            && in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true)
+            && now()->hour >= 21
+            && ! $this->overtimeCoversLateCutoff($data)) {
             $data['is_late'] = true;
         }
 
@@ -771,6 +778,25 @@ class DailyReportController extends Controller
         return view('daily-reports.show', ['report' => $dailyReport]);
     }
 
+    private function overtimeCoversLateCutoff(array $data): bool
+    {
+        if (! filter_var($data['overtime_status'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            return false;
+        }
+
+        $overtimeEnd = $data['overtime_end'] ?? null;
+        if (! $overtimeEnd) {
+            return false;
+        }
+
+        try {
+            return Carbon::createFromFormat('H:i', substr((string) $overtimeEnd, 0, 5))
+                ->greaterThanOrEqualTo(Carbon::createFromTime(21, 0));
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     /**
      * Komentar/masukan atasan pada laporan. Boleh ditulis oleh siapa pun yang
      * berhak melihat laporan tersebut (atasan dari pemilik laporan, atau pemilik
@@ -789,7 +815,7 @@ class DailyReportController extends Controller
 
         $comment = $dailyReport->comments()->create([
             'user_id' => $authorId,
-            'body'    => $data['body'],
+            'body' => $data['body'],
         ]);
 
         // Kirim notifikasi ke pemilik laporan & peserta diskusi lain (selain penulis).
@@ -802,7 +828,7 @@ class DailyReportController extends Controller
         foreach ($recipientIds as $recipientId) {
             CommentNotification::create([
                 'report_comment_id' => $comment->id,
-                'user_id'           => $recipientId,
+                'user_id' => $recipientId,
             ]);
         }
 

@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'absensi_bridge' => [
+        'secret' => env('ABSENSI_BRIDGE_SECRET'),
+    ],
+
 ];

@@ -34,21 +34,21 @@ class User extends Authenticatable
 
     public const WORK_SCHEDULE_DETAILS = [
         self::SCHEDULE_5DAYS => [
-            'label'    => '5 Hari Kerja',
+            'label' => '5 Hari Kerja',
             'weekdays' => 'Senin – Jumat',
-            'hours'    => '08:00 – 17:00',
+            'hours' => '08:00 – 17:00',
             'saturday' => null,
         ],
         self::SCHEDULE_6DAYS => [
-            'label'    => '6 Hari Kerja',
+            'label' => '6 Hari Kerja',
             'weekdays' => 'Senin – Jumat',
-            'hours'    => '09:00 – 17:00',
+            'hours' => '09:00 – 17:00',
             'saturday' => 'Sabtu: 09:00 – 14:00',
         ],
         self::SCHEDULE_SECURITY => [
-            'label'    => 'Security (Shift)',
+            'label' => 'Security (Shift)',
             'weekdays' => 'Shift bergilir',
-            'hours'    => 'Jadwal diatur per tanggal',
+            'hours' => 'Jadwal diatur per tanggal',
             'saturday' => null,
         ],
     ];
@@ -105,11 +105,13 @@ class User extends Authenticatable
         'position',
         'is_active',
         'work_schedule',
+        'api_token_hash',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'api_token_hash',
     ];
 
     protected function casts(): array
