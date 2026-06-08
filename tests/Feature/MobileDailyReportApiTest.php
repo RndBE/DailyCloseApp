@@ -139,6 +139,29 @@ class MobileDailyReportApiTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_mobile_security_daily_report_submitted_after_nine_pm_is_not_marked_late(): void
+    {
+        Carbon::setTestNow('2026-06-04 21:15:00');
+
+        $user = $this->makeStaffUser([
+            'division' => User::DIVISION_SECURITY,
+            'work_schedule' => User::SCHEDULE_SECURITY,
+        ]);
+        $token = $this->loginAndReturnToken($user);
+
+        $this->postJson('/api/mobile/daily-reports', $this->validReportPayload(), [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertCreated()
+            ->assertJsonPath('data.is_late', false);
+
+        $this->assertDatabaseHas('daily_reports', [
+            'user_id' => $user->id,
+            'is_late' => false,
+        ]);
+
+        Carbon::setTestNow();
+    }
+
     public function test_mobile_superior_can_fetch_lower_level_reports_from_same_division(): void
     {
         $leader = $this->makeStaffUser([

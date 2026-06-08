@@ -201,6 +201,7 @@ class MobileDailyReportController extends Controller
             ->exists();
 
         if (! $onLeave
+            && ! $user->isSecurity()
             && in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true)
             && now()->hour >= 21
             && ! $this->overtimeCoversLateCutoff($data)) {
