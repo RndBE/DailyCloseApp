@@ -199,7 +199,7 @@ class MobileDailyReportApiTest extends TestCase
             'completed_work' => 'Laporan peer leader',
         ]);
 
-        $response = $this->getJson('/api/mobile/team-daily-reports', [
+        $response = $this->getJson('/api/mobile/team-daily-reports?date=2026-06-04', [
             'Authorization' => 'Bearer '.$this->loginAndReturnToken($leader),
         ]);
 

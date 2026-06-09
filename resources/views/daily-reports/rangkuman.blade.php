@@ -210,9 +210,11 @@ $splitText = function(string $text): array {
 {{-- Rangkuman Per Divisi --}}
 @forelse($byDivision as $division => $rows)
     @php
-        $submitted  = $rows->filter(fn($r) => $r->report);
-        $onLeave    = $rows->filter(fn($r) => !$r->report && ($r->leave ?? null));
-        $missing    = $rows->filter(fn($r) => !$r->report && !($r->leave ?? null));
+        $scheduledOff = $rows->filter(fn($r) => !$r->report && ($r->securityOff ?? false));
+        $reportableRows = $rows->reject(fn($r) => $r->securityOff ?? false);
+        $submitted  = $reportableRows->filter(fn($r) => $r->report);
+        $onLeave    = $reportableRows->filter(fn($r) => !$r->report && ($r->leave ?? null));
+        $missing    = $reportableRows->filter(fn($r) => !$r->report && !($r->leave ?? null));
         $overtime   = $submitted->filter(fn($r) => $r->report->overtime_status);
         $needHelp   = $submitted->filter(fn($r) => $r->report->need_leader_help);
         $lateRows   = $submitted->filter(fn($r) => $r->report->is_late);
@@ -223,6 +225,7 @@ $splitText = function(string $text): array {
         $helpDesc       = $needHelp->map(fn($r) => trim($r->report->leader_help_description ?? ''))->filter()->values();
         $plans          = $submitted->map(fn($r) => trim($r->report->tomorrow_plan))->filter()->values();
         $notes          = $submitted->map(fn($r) => trim($r->report->additional_notes ?? ''))->filter()->values();
+        $isSecurityDivision = $division === \App\Models\User::DIVISION_SECURITY;
     @endphp
 
     <div class="card mb-4">
@@ -233,7 +236,7 @@ $splitText = function(string $text): array {
                 <i class="bi bi-building me-2 text-primary"></i>Divisi {{ $division }}
             </span>
             <span class="text-muted small">
-                {{ $submitted->count() }}/{{ $rows->count() }} anggota mengirim laporan
+                {{ $submitted->count() }}/{{ $reportableRows->count() }} anggota mengirim laporan
             </span>
         </div>
 
@@ -247,6 +250,18 @@ $splitText = function(string $text): array {
                     </span>
                     <span class="ms-1" style="color:#b15c00">
                         {{ $missing->map(fn($r) => $r->user->name)->join(', ') }}
+                    </span>
+                </div>
+            @endif
+
+            {{-- Libur shift security --}}
+            @if($scheduledOff->count() > 0)
+                <div class="mb-4 p-3 rounded" style="background:#eef6ff; border-left:3px solid #3b82f6">
+                    <span class="fw-semibold" style="color:#1d4ed8">
+                        <i class="bi bi-calendar-check me-1"></i>Libur Shift:
+                    </span>
+                    <span class="ms-1" style="color:#1d4ed8">
+                        {{ $scheduledOff->map(fn($r) => $r->user->name)->join(', ') }}
                     </span>
                 </div>
             @endif
@@ -267,6 +282,87 @@ $splitText = function(string $text): array {
                 <p class="text-muted text-center py-3 mb-0">
                     <i class="bi bi-inbox me-1"></i>Tidak ada laporan yang masuk dari divisi ini.
                 </p>
+            @elseif($isSecurityDivision)
+                @foreach($submitted as $row)
+                    @php
+                        $report = $row->report;
+                        $schedule = $row->securitySchedule ?? null;
+                        $shiftLabel = ($schedule && !$schedule->is_off && $schedule->start_time && $schedule->end_time)
+                            ? 'Shift ' . substr($schedule->start_time, 0, 5) . ' - ' . substr($schedule->end_time, 0, 5)
+                            : 'Shift belum diatur';
+                        $securitySections = [
+                            'Pekerjaan yang Diselesaikan' => trim($report->completed_work),
+                            'Pekerjaan yang Belum Selesai' => trim($report->unfinished_work ?? ''),
+                            'Hambatan' => trim($report->obstacles ?? ''),
+                            'Rencana Kerja Hari Berikutnya' => trim($report->tomorrow_plan),
+                            'Catatan Tambahan' => trim($report->additional_notes ?? ''),
+                        ];
+                    @endphp
+
+                    <div class="py-3 {{ $loop->first ? 'pt-0' : '' }} {{ ! $loop->last ? 'border-bottom' : '' }}">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div>
+                                <div class="fw-bold">
+                                    <i class="bi bi-person-circle me-1 text-primary"></i>{{ $row->user->name }}
+                                </div>
+                                <div class="text-muted small">
+                                    {{ $row->user->position ?? 'Security' }} &bull; {{ $shiftLabel }}
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @if($report->overtime_status)
+                                    <span class="badge-soft bg-soft-warning">
+                                        <i class="bi bi-stopwatch"></i>Lembur
+                                    </span>
+                                @endif
+                                @if($report->need_leader_help)
+                                    <span class="badge-soft bg-soft-danger">
+                                        <i class="bi bi-exclamation-circle"></i>Butuh Bantuan
+                                    </span>
+                                @endif
+                                @if($report->is_late)
+                                    <span class="badge-soft bg-soft-danger">
+                                        <i class="bi bi-clock-history"></i>Terlambat
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        @foreach($securitySections as $sectionTitle => $sectionText)
+                            @continue($sectionTitle === 'Catatan Tambahan' && $sectionText === '')
+                            <div class="mb-3">
+                                <div class="fw-semibold small text-uppercase text-muted mb-1">{{ $sectionTitle }}</div>
+                                @if($sectionText !== '')
+                                    <ul class="mb-0" style="padding-left:1.25rem; line-height:1.8">
+                                        @foreach($splitText($sectionText) as $line)
+                                            <li>{{ $line }}</li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <p class="text-muted mb-0"><em>Tidak ada data.</em></p>
+                                @endif
+                            </div>
+                        @endforeach
+
+                        <div class="mb-0">
+                            <div class="fw-semibold small text-uppercase text-muted mb-1">Kebutuhan Bantuan Pimpinan</div>
+                            @if($report->need_leader_help)
+                                @php $helpText = trim($report->leader_help_description ?? ''); @endphp
+                                @if($helpText !== '')
+                                    <ul class="mb-0" style="padding-left:1.25rem; line-height:1.8">
+                                        @foreach($splitText($helpText) as $line)
+                                            <li>{{ $line }}</li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <p class="mb-0" style="color:#b02a37"><em>Butuh bantuan pimpinan.</em></p>
+                                @endif
+                            @else
+                                <p class="text-muted mb-0"><em>Tidak ada permintaan bantuan.</em></p>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
             @else
                 @php $n = 0; @endphp
 

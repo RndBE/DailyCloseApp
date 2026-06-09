@@ -420,9 +420,11 @@
 
             $flatten = fn($col) => $col->flatMap(fn($v) => $split($v))->filter()->values();
 
-            $submitted  = $rows->filter(fn($r) => $r->report);
-            $onLeave    = $rows->filter(fn($r) => !$r->report && ($r->leave ?? null));
-            $missing    = $rows->filter(fn($r) => !$r->report && !($r->leave ?? null));
+            $scheduledOff = $rows->filter(fn($r) => !$r->report && ($r->securityOff ?? false));
+            $reportableRows = $rows->reject(fn($r) => $r->securityOff ?? false);
+            $submitted  = $reportableRows->filter(fn($r) => $r->report);
+            $onLeave    = $reportableRows->filter(fn($r) => !$r->report && ($r->leave ?? null));
+            $missing    = $reportableRows->filter(fn($r) => !$r->report && !($r->leave ?? null));
             $overtime   = $submitted->filter(fn($r) => $r->report->overtime_status);
             $needHelp   = $submitted->filter(fn($r) => $r->report->need_leader_help);
             $lateRows   = $submitted->filter(fn($r) => $r->report->is_late);
@@ -433,12 +435,13 @@
             $helpDesc      = $flatten($needHelp->map(fn($r) => trim($r->report->leader_help_description ?? ''))->filter());
             $plans         = $flatten($submitted->map(fn($r) => trim($r->report->tomorrow_plan))->filter());
             $notes         = $flatten($submitted->map(fn($r) => trim($r->report->additional_notes ?? ''))->filter());
+            $isSecurityDivision = $division === \App\Models\User::DIVISION_SECURITY;
         @endphp
 
         <div class="divisi-block">
             <div class="divisi-header">
                 <span>Divisi {{ $division }}</span>
-                <span class="sub">{{ $submitted->count() }}/{{ $rows->count() }} laporan masuk</span>
+                <span class="sub">{{ $submitted->count() }}/{{ $reportableRows->count() }} laporan masuk</span>
             </div>
             <div class="divisi-body">
 
@@ -446,6 +449,13 @@
                     <div class="alert-missing">
                         <strong>Belum mengirim laporan:</strong>
                         {{ $missing->map(fn($r) => $r->user->name)->join(', ') }}
+                    </div>
+                @endif
+
+                @if($scheduledOff->count() > 0)
+                    <div class="alert-missing" style="background:#eef6ff; border-color:#3b82f6; color:#1d4ed8">
+                        <strong>Libur Shift:</strong>
+                        {{ $scheduledOff->map(fn($r) => $r->user->name)->join(', ') }}
                     </div>
                 @endif
 
@@ -458,6 +468,68 @@
 
                 @if($submitted->count() === 0)
                     <p class="empty-text">Tidak ada laporan yang masuk dari divisi ini.</p>
+                @elseif($isSecurityDivision)
+                    @foreach($submitted as $row)
+                        @php
+                            $report = $row->report;
+                            $schedule = $row->securitySchedule ?? null;
+                            $shiftLabel = ($schedule && !$schedule->is_off && $schedule->start_time && $schedule->end_time)
+                                ? 'Shift ' . substr($schedule->start_time, 0, 5) . ' - ' . substr($schedule->end_time, 0, 5)
+                                : 'Shift belum diatur';
+                            $securitySections = [
+                                'Pekerjaan yang Diselesaikan' => trim($report->completed_work),
+                                'Pekerjaan yang Belum Selesai' => trim($report->unfinished_work ?? ''),
+                                'Hambatan' => trim($report->obstacles ?? ''),
+                                'Rencana Kerja Hari Berikutnya' => trim($report->tomorrow_plan),
+                                'Catatan Tambahan' => trim($report->additional_notes ?? ''),
+                            ];
+                        @endphp
+
+                        <div class="section" style="{{ ! $loop->last ? 'border-bottom:1px solid #ddd; padding-bottom:10px;' : '' }} {{ ! $loop->first ? 'padding-top:10px;' : '' }}">
+                            <div style="font-weight:bold; font-size:11pt; margin-bottom:6px">
+                                {{ $row->user->name }}
+                                <span style="font-weight:normal; color:#555; font-size:9.5pt">
+                                    — {{ $row->user->position ?? 'Security' }} &bull; {{ $shiftLabel }}
+                                </span>
+                            </div>
+
+                            @foreach($securitySections as $sectionTitle => $sectionText)
+                                @continue($sectionTitle === 'Catatan Tambahan' && $sectionText === '')
+                                <div class="section" style="margin-bottom:8px">
+                                    <div class="section-title" style="font-size:10pt">{{ $sectionTitle }}</div>
+                                    @if($sectionText !== '')
+                                        <ul>
+                                            @foreach($flatten(collect([$sectionText])) as $line)
+                                                <li>{{ $line }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <p class="empty-text">Tidak ada data.</p>
+                                    @endif
+                                </div>
+                            @endforeach
+
+                            <div class="section" style="margin-bottom:0">
+                                <div class="section-title" style="font-size:10pt">Kebutuhan Bantuan Pimpinan</div>
+                                @if($report->need_leader_help)
+                                    @php $helpText = trim($report->leader_help_description ?? ''); @endphp
+                                    @if($helpText !== '')
+                                        <ul>
+                                            @foreach($flatten(collect([$helpText])) as $line)
+                                                <li>{{ $line }}</li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <p style="padding-left:28px; font-size:10pt; margin:0; color:#333">
+                                            <em>Butuh bantuan pimpinan.</em>
+                                        </p>
+                                    @endif
+                                @else
+                                    <p class="empty-text">Tidak ada permintaan bantuan.</p>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
                 @else
                     @php $n = 0; @endphp
 

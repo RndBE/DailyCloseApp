@@ -219,14 +219,28 @@ class DailyReportController extends Controller
             ->get()
             ->keyBy('user_id');
 
+        $securityScheduleByUser = SecuritySchedule::query()
+            ->whereIn('user_id', $members->pluck('id')->push($user->id)->unique())
+            ->whereDate('date', $date)
+            ->get()
+            ->keyBy('user_id');
+
         // Managers get a dedicated section; exclude them from per-division breakdown
         $rows = $members
             ->filter(fn ($m) => $m->level !== User::LEVEL_MANAGER)
-            ->map(fn ($member) => (object) [
-                'user' => $member,
-                'report' => $member->dailyReports->first(),
-                'leave' => $leaveByUser->get($member->id),
-            ]);
+            ->map(function ($member) use ($leaveByUser, $securityScheduleByUser) {
+                $securitySchedule = $member->work_schedule === User::SCHEDULE_SECURITY
+                    ? $securityScheduleByUser->get($member->id)
+                    : null;
+
+                return (object) [
+                    'user' => $member,
+                    'report' => $member->dailyReports->first(),
+                    'leave' => $leaveByUser->get($member->id),
+                    'securitySchedule' => $securitySchedule,
+                    'securityOff' => (bool) ($securitySchedule?->is_off),
+                ];
+            });
 
         // Leader includes their own report alongside their team's reports
         if ($user->level === User::LEVEL_LEADER) {
@@ -235,6 +249,8 @@ class DailyReportController extends Controller
                 'user' => $user,
                 'report' => $selfReport,
                 'leave' => $leaveByUser->get($user->id),
+                'securitySchedule' => $securityScheduleByUser->get($user->id),
+                'securityOff' => (bool) ($securityScheduleByUser->get($user->id)?->is_off),
             ]])->merge($rows);
         }
 
@@ -243,14 +259,15 @@ class DailyReportController extends Controller
         $managerRows = $this->managerRowsQuery($user, $date);
 
         $allRows = $rows->values()->merge($managerRows);
+        $reportableRows = $allRows->reject(fn ($r) => $r->securityOff ?? false);
         $totalStats = [
-            'total' => $allRows->count(),
-            'submitted' => $allRows->filter(fn ($r) => $r->report)->count(),
-            'missing' => $allRows->filter(fn ($r) => ! $r->report && ! ($r->leave ?? null))->count(),
-            'leave' => $allRows->filter(fn ($r) => ! $r->report && ($r->leave ?? null))->count(),
-            'overtime' => $allRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
-            'help' => $allRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
-            'late' => $allRows->filter(fn ($r) => $r->report?->is_late)->count(),
+            'total' => $reportableRows->count(),
+            'submitted' => $reportableRows->filter(fn ($r) => $r->report)->count(),
+            'missing' => $reportableRows->filter(fn ($r) => ! $r->report && ! ($r->leave ?? null))->count(),
+            'leave' => $reportableRows->filter(fn ($r) => ! $r->report && ($r->leave ?? null))->count(),
+            'overtime' => $reportableRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
+            'help' => $reportableRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
+            'late' => $reportableRows->filter(fn ($r) => $r->report?->is_late)->count(),
         ];
 
         return view('daily-reports.rangkuman', [
@@ -290,13 +307,27 @@ class DailyReportController extends Controller
             ->get()
             ->keyBy('user_id');
 
+        $securityScheduleByUser = SecuritySchedule::query()
+            ->whereIn('user_id', $members->pluck('id')->push($user->id)->unique())
+            ->whereDate('date', $date)
+            ->get()
+            ->keyBy('user_id');
+
         $rows = $members
             ->filter(fn ($m) => $m->level !== User::LEVEL_MANAGER)
-            ->map(fn ($member) => (object) [
-                'user' => $member,
-                'report' => $member->dailyReports->first(),
-                'leave' => $leaveByUser->get($member->id),
-            ]);
+            ->map(function ($member) use ($leaveByUser, $securityScheduleByUser) {
+                $securitySchedule = $member->work_schedule === User::SCHEDULE_SECURITY
+                    ? $securityScheduleByUser->get($member->id)
+                    : null;
+
+                return (object) [
+                    'user' => $member,
+                    'report' => $member->dailyReports->first(),
+                    'leave' => $leaveByUser->get($member->id),
+                    'securitySchedule' => $securitySchedule,
+                    'securityOff' => (bool) ($securitySchedule?->is_off),
+                ];
+            });
 
         if ($user->level === User::LEVEL_LEADER) {
             $selfReport = DailyReport::where('user_id', $user->id)->whereDate('report_date', $date)->first();
@@ -304,6 +335,8 @@ class DailyReportController extends Controller
                 'user' => $user,
                 'report' => $selfReport,
                 'leave' => $leaveByUser->get($user->id),
+                'securitySchedule' => $securityScheduleByUser->get($user->id),
+                'securityOff' => (bool) ($securityScheduleByUser->get($user->id)?->is_off),
             ]])->merge($rows);
         }
 
@@ -312,14 +345,15 @@ class DailyReportController extends Controller
         $managerRows = $this->managerRowsQuery($user, $date);
 
         $allRows = $rows->values()->merge($managerRows);
+        $reportableRows = $allRows->reject(fn ($r) => $r->securityOff ?? false);
         $totalStats = [
-            'total' => $allRows->count(),
-            'submitted' => $allRows->filter(fn ($r) => $r->report)->count(),
-            'missing' => $allRows->filter(fn ($r) => ! $r->report && ! ($r->leave ?? null))->count(),
-            'leave' => $allRows->filter(fn ($r) => ! $r->report && ($r->leave ?? null))->count(),
-            'overtime' => $allRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
-            'help' => $allRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
-            'late' => $allRows->filter(fn ($r) => $r->report?->is_late)->count(),
+            'total' => $reportableRows->count(),
+            'submitted' => $reportableRows->filter(fn ($r) => $r->report)->count(),
+            'missing' => $reportableRows->filter(fn ($r) => ! $r->report && ! ($r->leave ?? null))->count(),
+            'leave' => $reportableRows->filter(fn ($r) => ! $r->report && ($r->leave ?? null))->count(),
+            'overtime' => $reportableRows->filter(fn ($r) => $r->report?->overtime_status)->count(),
+            'help' => $reportableRows->filter(fn ($r) => $r->report?->need_leader_help)->count(),
+            'late' => $reportableRows->filter(fn ($r) => $r->report?->is_late)->count(),
         ];
 
         return view('daily-reports.rangkuman-cetak', [
