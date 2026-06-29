@@ -33,11 +33,15 @@ class UserRequest extends FormRequest
         $companyId = $this->input('company_id');
         $companyId = ($companyId === '' || $companyId === null) ? null : (int) $companyId;
 
+        // Outsourcing hanya relevan untuk jadwal security → paksa false bila bukan security.
+        $isSecurity = $this->input('work_schedule') === User::SCHEDULE_SECURITY;
+
         $this->merge([
             'is_active' => $this->boolean('is_active'),
             'is_super_admin' => $this->boolean('is_super_admin'),
             'managed_divisions' => $supportsManaged ? $managed : null,
             'company_id' => $companyId,
+            'is_outsourcing' => $isSecurity ? $this->boolean('is_outsourcing') : false,
         ]);
     }
 
@@ -75,8 +79,9 @@ class UserRequest extends FormRequest
             'managed_divisions' => ['nullable', 'array'],
             'managed_divisions.*' => [Rule::in(User::DIVISIONS)],
             'position' => ['nullable', Rule::in(User::POSITIONS)],
-            'is_active'     => ['required', 'boolean'],
-            'work_schedule' => ['nullable', Rule::in(array_keys(User::WORK_SCHEDULES))],
+            'is_active'      => ['required', 'boolean'],
+            'work_schedule'  => ['nullable', Rule::in(array_keys(User::WORK_SCHEDULES))],
+            'is_outsourcing' => ['required', 'boolean'],
         ];
     }
 }

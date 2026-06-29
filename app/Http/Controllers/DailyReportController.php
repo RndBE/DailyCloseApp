@@ -450,8 +450,14 @@ class DailyReportController extends Controller
                     $effectiveDays = max(0, $effectiveDays - $leaveWorkdays);
 
                     // Lembur dihitung otomatis dari shift 12 jam (kelebihan di atas 8 jam).
-                    $overtimeCount = $sched->filter(fn ($s) => $s->overtimeHours() > 0)->count();
-                    $overtimeHours = $sched->sum(fn ($s) => $s->overtimeHours());
+                    // Security outsourcing dikecualikan: tidak dapat lembur otomatis.
+                    if ($member->isOutsourcing()) {
+                        $overtimeCount = 0;
+                        $overtimeHours = 0;
+                    } else {
+                        $overtimeCount = $sched->filter(fn ($s) => $s->overtimeHours() > 0)->count();
+                        $overtimeHours = $sched->sum(fn ($s) => $s->overtimeHours());
+                    }
                 } else {
                     $effectiveDays = $totalDays;
                     $overtimeCount = 0;
@@ -626,7 +632,8 @@ class DailyReportController extends Controller
             $secRow = $isSecurity ? $secSchedule->get($dateStr) : null;
 
             // Lembur otomatis security: kelebihan durasi shift 12 jam di atas 8 jam.
-            $autoOt = ($isSecurity && $secRow && ! $secRow->is_off) ? $secRow->overtimeHours() : 0;
+            // Security outsourcing dikecualikan (tanpa lembur otomatis).
+            $autoOt = ($isSecurity && $secRow && ! $secRow->is_off && ! $targetUser->isOutsourcing()) ? $secRow->overtimeHours() : 0;
             $autoOtLabel = $autoOt > 0 ? $fmtOt($autoOt) : '';
 
             if ($isSecurity) {

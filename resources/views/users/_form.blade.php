@@ -207,6 +207,18 @@
                 </select>
                 <div class="form-text">Jam kerja efektif karyawan ini.</div>
             </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Status Outsourcing</label>
+                <div class="form-check mt-2">
+                    <input type="hidden" name="is_outsourcing" value="0">
+                    <input class="form-check-input" type="checkbox" name="is_outsourcing" value="1"
+                           id="is_outsourcing"
+                           @checked(old('is_outsourcing', $user->is_outsourcing ?? false))>
+                    <label class="form-check-label" for="is_outsourcing">Security outsourcing</label>
+                </div>
+                <div class="form-text">Bila dicentang, shift 12 jam <strong>tidak</strong> dihitung lembur otomatis 4 jam. Hanya berlaku untuk jadwal <em>Security (Shift)</em>.</div>
+            </div>
         </div>
     </div>
 </div>

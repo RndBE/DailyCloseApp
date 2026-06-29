@@ -246,7 +246,8 @@ $splitCell = function(string $text): array {
                                             $secRow          = $isSecurity ? $secSchedule->get($dateStr) : null;
                                             $leave           = $memberLeaves[$dateStr] ?? null;
                                             // Lembur otomatis security: kelebihan durasi shift di atas 8 jam (shift 12 jam → 4 jam).
-                                            $autoOt          = ($isSecurity && $secRow && ! $secRow->is_off) ? $secRow->overtimeHours() : 0;
+                                            // Security outsourcing dikecualikan (tanpa lembur otomatis).
+                                            $autoOt          = ($isSecurity && $secRow && ! $secRow->is_off && ! $row->user->isOutsourcing()) ? $secRow->overtimeHours() : 0;
                                             $autoOtLabel     = $autoOt > 0 ? rtrim(rtrim(number_format($autoOt, 1), '0'), '.') . ' jam' : null;
                                             if ($isSecurity) {
                                                 // Security: libur = hari off terjadwal. Libur nasional tidak memaksa off.

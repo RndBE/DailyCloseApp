@@ -105,6 +105,7 @@ class User extends Authenticatable
         'position',
         'is_active',
         'work_schedule',
+        'is_outsourcing',
         'api_token_hash',
     ];
 
@@ -120,6 +121,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
+            'is_outsourcing' => 'boolean',
             'level' => 'integer',
             'managed_divisions' => 'array',
         ];
@@ -143,6 +145,15 @@ class User extends Authenticatable
     public function isSecurity(): bool
     {
         return $this->work_schedule === self::SCHEDULE_SECURITY;
+    }
+
+    /**
+     * Security outsourcing: shift 12 jam tidak dihitung lembur otomatis 4 jam.
+     * Hanya bermakna bila user adalah security.
+     */
+    public function isOutsourcing(): bool
+    {
+        return $this->isSecurity() && (bool) $this->is_outsourcing;
     }
 
     public function getLevelNameAttribute(): string
