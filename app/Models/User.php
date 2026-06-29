@@ -78,6 +78,7 @@ class User extends Authenticatable
         'HRD',
         'Publikasi',
         'Hardware',
+        'Supporting Staff',
         self::DIVISION_SECURITY,
     ];
 
