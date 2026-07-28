@@ -69,6 +69,9 @@
                                 @if($u->is_super_admin)
                                     <span class="badge-soft" style="background:#fdecec;color:#b02a37"><i class="bi bi-shield-lock"></i> Super Admin</span>
                                 @endif
+                                @if($u->can_download_all_monthly_reports)
+                                    <span class="badge-soft" style="background:#e7f7ee;color:#157347"><i class="bi bi-file-earmark-spreadsheet"></i> Laporan Bulanan Semua Level</span>
+                                @endif
                                 @if(is_null($u->company_id))
                                     <span class="badge-soft" style="background:#eef2ff;color:#4f46e5"><i class="bi bi-globe2"></i> Global</span>
                                 @endif

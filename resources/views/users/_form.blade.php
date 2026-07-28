@@ -155,6 +155,22 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-6">
+                <label class="form-label">Akses Laporan Bulanan</label>
+                <div class="access-option-panel">
+                    <input type="hidden" name="can_download_all_monthly_reports" value="0">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="can_download_all_monthly_reports"
+                               name="can_download_all_monthly_reports" value="1"
+                               @checked(old('can_download_all_monthly_reports', $user->can_download_all_monthly_reports ?? false))>
+                        <label class="form-check-label" for="can_download_all_monthly_reports">
+                            <span class="fw-semibold">Download Semua Level</span>
+                            <div class="small text-muted">Dapat melihat dan mengunduh laporan bulanan seluruh level dalam perusahaan ini.</div>
+                        </label>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="row g-3 mt-2">

@@ -138,7 +138,7 @@ Catatan: **Super Admin** adalah flag terpisah dari level — bisa di-set pada us
 ## Daftar Divisi & Jabatan
 
 **Divisi** (dropdown tetap):
-Direktur, Komisaris, Marketing, RnD, Software, Admin Project, Engineer, Tax Officer, Accounting, Purchasing, HSE, Helper, HRD, Publikasi, Hardware
+Direktur, Komisaris, Marketing, Bidding, RnD, Software, Admin, Admin Project, Engineer, Tax Officer, Accounting, Purchasing, HSE, Helper, HRD, Publikasi, Hardware, Supporting Staff, Security
 
 **Jabatan** (dropdown tetap):
 Direktur, Komisaris, Manager, Leader, Staff

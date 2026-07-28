@@ -65,6 +65,7 @@ class User extends Authenticatable
         'Direktur',
         'Komisaris',
         'Marketing',
+        'Bidding',
         'RnD',
         'Software',
         'Admin',
@@ -101,6 +102,7 @@ class User extends Authenticatable
         'company_id',
         'level',
         'is_super_admin',
+        'can_download_all_monthly_reports',
         'division',
         'managed_divisions',
         'position',
@@ -122,6 +124,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'is_super_admin' => 'boolean',
+            'can_download_all_monthly_reports' => 'boolean',
             'is_outsourcing' => 'boolean',
             'level' => 'integer',
             'managed_divisions' => 'array',
@@ -174,6 +177,11 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return (bool) $this->is_super_admin;
+    }
+
+    public function canDownloadAllMonthlyReports(): bool
+    {
+        return $this->isSuperAdmin() || (bool) $this->can_download_all_monthly_reports;
     }
 
     /**

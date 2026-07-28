@@ -378,9 +378,17 @@ class DailyReportController extends Controller
         $end = $start->copy()->endOfMonth();
         $totalDays = $start->daysInMonth;
 
-        // Ambil semua anggota yang visible
-        $isStaff = ! $user->isSuperAdmin() && $user->level === User::LEVEL_STAFF;
-        if ($isStaff) {
+        // Izin khusus laporan bulanan tidak mengubah visibilitas laporan harian.
+        // User yang diberi izin ini melihat seluruh user aktif di perusahaannya,
+        // termasuk Owner/Manager/Leader/Staff.
+        if ($user->canDownloadAllMonthlyReports()) {
+            $members = User::query()
+                ->where('is_active', true)
+                ->orderBy('division')
+                ->orderBy('level')
+                ->orderBy('name')
+                ->get();
+        } elseif ($user->level === User::LEVEL_STAFF) {
             $members = collect([$user]);
         } else {
             $members = $this->teamMembersQuery($user)
@@ -538,7 +546,7 @@ class DailyReportController extends Controller
 
         $targetUser = User::findOrFail($userId);
 
-        $allowed = $authUser->isSuperAdmin()
+        $allowed = $authUser->canDownloadAllMonthlyReports()
             || $authUser->id === $userId
             || DailyReport::query()->visibleTo($authUser)->where('user_id', $userId)->exists();
         abort_unless($allowed, 403);

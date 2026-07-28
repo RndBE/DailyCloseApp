@@ -39,6 +39,7 @@ class UserRequest extends FormRequest
         $this->merge([
             'is_active' => $this->boolean('is_active'),
             'is_super_admin' => $this->boolean('is_super_admin'),
+            'can_download_all_monthly_reports' => $this->boolean('can_download_all_monthly_reports'),
             'managed_divisions' => $supportsManaged ? $managed : null,
             'company_id' => $companyId,
             'is_outsourcing' => $isSecurity ? $this->boolean('is_outsourcing') : false,
@@ -75,6 +76,7 @@ class UserRequest extends FormRequest
             'password' => $passwordRule,
             'level' => ['required', 'integer', Rule::in([1, 2, 3, 4])],
             'is_super_admin' => ['required', 'boolean'],
+            'can_download_all_monthly_reports' => ['required', 'boolean'],
             'division' => ['nullable', Rule::in(User::DIVISIONS)],
             'managed_divisions' => ['nullable', 'array'],
             'managed_divisions.*' => [Rule::in(User::DIVISIONS)],
