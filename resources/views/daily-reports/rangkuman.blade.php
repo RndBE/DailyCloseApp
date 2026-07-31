@@ -1,17 +1,7 @@
 @extends('layouts.app')
 
 @php
-$splitText = function(string $text): array {
-    $lines = preg_split('/\r\n|\n|\r/', $text);
-    $result = [];
-    foreach ($lines as $line) {
-        foreach (preg_split('/\s*(?:^|\s)-\s+/', $line) as $part) {
-            $part = trim($part, " \t-•·");
-            if ($part !== '') $result[] = $part;
-        }
-    }
-    return $result ?: [trim($text)];
-};
+$splitText = fn (string $text): array => \App\Support\ReportText::splitBullets($text);
 @endphp
 
 @section('title', 'Rangkuman Laporan Tim')

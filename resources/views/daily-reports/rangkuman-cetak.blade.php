@@ -281,16 +281,7 @@
     {{-- Laporan Manager --}}
     @if($managerRows->count() > 0)
         @php
-            $splitM = function(string $text): array {
-                $result = [];
-                foreach (preg_split('/\r\n|\n|\r/', $text) as $line) {
-                    foreach (preg_split('/\s+-\s+/', $line) as $part) {
-                        $part = trim($part, " \t-•·");
-                        if ($part !== '') $result[] = $part;
-                    }
-                }
-                return $result ?: [trim($text)];
-            };
+            $splitM = fn (string $text): array => \App\Support\ReportText::splitBullets($text);
         @endphp
 
         <div style="margin-bottom:24px;">
@@ -407,16 +398,7 @@
     {{-- Per Divisi --}}
     @forelse($byDivision as $division => $rows)
         @php
-            $split = function(string $text): array {
-                $result = [];
-                foreach (preg_split('/\r\n|\n|\r/', $text) as $line) {
-                    foreach (preg_split('/\s+-\s+/', $line) as $part) {
-                        $part = trim($part, " \t-•·");
-                        if ($part !== '') $result[] = $part;
-                    }
-                }
-                return $result ?: [trim($text)];
-            };
+            $split = fn (string $text): array => \App\Support\ReportText::splitBullets($text);
 
             $flatten = fn($col) => $col->flatMap(fn($v) => $split($v))->filter()->values();
 

@@ -13,6 +13,68 @@ class DailyReportSummaryTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_summary_strips_invisible_word_joiners_from_dash_bullets(): void
+    {
+        $owner = $this->makeUser([
+            'name' => 'Owner HRD',
+            'email' => 'owner.hrd@example.test',
+            'level' => User::LEVEL_OWNER,
+            'division' => 'Direktur',
+            'position' => 'Owner',
+        ]);
+
+        $staff = $this->makeUser([
+            'name' => 'Avissa Test',
+            'email' => 'avissa.test@example.test',
+            'division' => 'HRD',
+            'position' => 'Leader',
+        ]);
+
+        $this->createReportFor($staff, [
+            'completed_work' => "- Melakukan penyampaian daily closing\n- \u{2060}Melakukan diskusi terkait pembinaan",
+            'tomorrow_plan' => "- \u{2060}Melakukan cek KPI",
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->get(route('daily-reports.rangkuman', ['date' => '2026-06-04']))
+            ->assertOk()
+            ->assertSeeText('Melakukan diskusi terkait pembinaan')
+            ->assertSeeText('Melakukan cek KPI');
+
+        $this->assertStringNotContainsString("\u{2060}", $response->getContent());
+    }
+
+    public function test_printable_summary_strips_invisible_word_joiners_from_dash_bullets(): void
+    {
+        $owner = $this->makeUser([
+            'name' => 'Owner HRD Cetak',
+            'email' => 'owner.hrd.cetak@example.test',
+            'level' => User::LEVEL_OWNER,
+            'division' => 'Direktur',
+            'position' => 'Owner',
+        ]);
+
+        $staff = $this->makeUser([
+            'name' => 'Avissa Cetak Test',
+            'email' => 'avissa.cetak.test@example.test',
+            'division' => 'HRD',
+            'position' => 'Leader',
+        ]);
+
+        $this->createReportFor($staff, [
+            'completed_work' => "- Melakukan penyampaian daily closing\n- \u{2060}Melakukan diskusi terkait pembinaan",
+            'tomorrow_plan' => "- \u{2060}Melakukan cek KPI",
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->get(route('daily-reports.rangkuman.cetak', ['date' => '2026-06-04']))
+            ->assertOk()
+            ->assertSeeText('Melakukan diskusi terkait pembinaan')
+            ->assertSeeText('Melakukan cek KPI');
+
+        $this->assertStringNotContainsString("\u{2060}", $response->getContent());
+    }
+
     public function test_security_summary_groups_submitted_report_content_by_sender(): void
     {
         $owner = $this->makeUser([
