@@ -40,25 +40,38 @@ class InternalPayrollDailyReportController extends Controller
 
         $users = User::withoutGlobalScopes()
             ->whereIn('email', $emails)
-            ->withCount([
-                'dailyReports as late_reports_count' => fn ($query) => $query
+            ->with([
+                'dailyReports' => fn ($query) => $query
                     ->withoutGlobalScopes()
                     ->whereBetween('report_date', [$start, $end])
-                    ->where('is_late', true),
+                    ->where('is_late', true)
+                    ->orderBy('report_date')
+                    ->select(['id', 'user_id', 'report_date']),
             ])
             ->get(['id', 'email']);
 
-        $counts = $users->mapWithKeys(
-            fn (User $user) => [strtolower($user->email) => (int) $user->late_reports_count]
-        );
+        $lateReports = $users->mapWithKeys(function (User $user) {
+            $dates = $user->dailyReports
+                ->map(fn ($report) => $report->report_date->toDateString())
+                ->unique()
+                ->values()
+                ->all();
+
+            return [strtolower($user->email) => $dates];
+        });
 
         return response()->json([
             'success' => true,
             'data' => $emails
-                ->map(fn ($email) => [
-                    'email' => $email,
-                    'late_days' => (int) ($counts[$email] ?? 0),
-                ])
+                ->map(function ($email) use ($lateReports) {
+                    $dates = $lateReports[$email] ?? [];
+
+                    return [
+                        'email' => $email,
+                        'late_days' => count($dates),
+                        'late_dates' => $dates,
+                    ];
+                })
                 ->values()
                 ->all(),
         ]);

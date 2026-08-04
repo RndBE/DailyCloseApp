@@ -81,10 +81,13 @@ class InternalMobileTokenApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.0.email', 'staff@example.test')
             ->assertJsonPath('data.0.late_days', 2)
+            ->assertJsonPath('data.0.late_dates', ['2026-06-04', '2026-06-05'])
             ->assertJsonPath('data.1.email', 'other@example.test')
             ->assertJsonPath('data.1.late_days', 0)
+            ->assertJsonPath('data.1.late_dates', [])
             ->assertJsonPath('data.2.email', 'missing@example.test')
-            ->assertJsonPath('data.2.late_days', 0);
+            ->assertJsonPath('data.2.late_days', 0)
+            ->assertJsonPath('data.2.late_dates', []);
     }
 
     private function makeUser(string $email): User
