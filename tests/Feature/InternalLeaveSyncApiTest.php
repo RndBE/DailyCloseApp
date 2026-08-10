@@ -104,18 +104,11 @@ class InternalLeaveSyncApiTest extends TestCase
             ->assertJsonPath('deleted', false);
     }
 
-    public function test_sync_reports_overlapping_manual_records(): void
+    public function test_fully_covered_manual_record_is_absorbed_so_the_page_is_not_doubled(): void
     {
         $user = $this->makeUser('staff@example.test');
 
-        $manual = Leave::withoutGlobalScopes()->create([
-            'company_id' => $user->company_id,
-            'user_id' => $user->id,
-            'type' => Leave::TYPE_SAKIT,
-            'start_date' => '2026-08-12',
-            'end_date' => '2026-08-12',
-            'source' => Leave::SOURCE_MANUAL,
-        ]);
+        $manual = $this->makeManualLeave($user, '2026-08-12', '2026-08-12', Leave::TYPE_SAKIT);
 
         $this->syncRequest([
             'external_id' => 'leave-req-91',
@@ -124,10 +117,111 @@ class InternalLeaveSyncApiTest extends TestCase
             'start_date' => '2026-08-11',
             'end_date' => '2026-08-13',
         ])->assertCreated()
+            ->assertJsonPath('absorbed_manual_ids', [$manual->id])
+            ->assertJsonPath('overlapping_manual_ids', []);
+
+        $this->assertDatabaseMissing('leaves', ['id' => $manual->id]);
+
+        // Yang tersisa hanya satu baris untuk rentang itu — tidak dobel.
+        $this->assertSame(1, Leave::withoutGlobalScopes()->count());
+    }
+
+    public function test_manual_record_on_the_exact_same_day_is_absorbed(): void
+    {
+        // Kasus yang terlihat di halaman Cuti: HRIS dan manual persis satu tanggal sama.
+        $user = $this->makeUser('staff@example.test');
+
+        $manual = $this->makeManualLeave($user, '2026-07-13', '2026-07-13');
+
+        $this->syncRequest([
+            'external_id' => 'leave-req-77',
+            'email' => 'staff@example.test',
+            'type' => Leave::TYPE_CUTI,
+            'start_date' => '2026-07-13',
+            'end_date' => '2026-07-13',
+            'reason' => 'acara keluarga',
+        ])->assertCreated()
+            ->assertJsonPath('absorbed_manual_ids', [$manual->id]);
+
+        $this->assertSame(1, Leave::withoutGlobalScopes()->count());
+        $this->assertSame(Leave::SOURCE_ABSENSI, Leave::withoutGlobalScopes()->firstOrFail()->source);
+    }
+
+    public function test_manual_record_sticking_out_of_the_hris_range_is_kept(): void
+    {
+        $user = $this->makeUser('staff@example.test');
+
+        // Manual 11-15 Agu, HRIS hanya menyetujui 12-14. Tanggal 11 dan 15 tidak
+        // dijamin baris HRIS, jadi barisnya tidak boleh dihapus.
+        $manual = $this->makeManualLeave($user, '2026-08-11', '2026-08-15');
+
+        $this->syncRequest([
+            'external_id' => 'leave-req-91',
+            'email' => 'staff@example.test',
+            'type' => Leave::TYPE_CUTI,
+            'start_date' => '2026-08-12',
+            'end_date' => '2026-08-14',
+        ])->assertCreated()
+            ->assertJsonPath('absorbed_manual_ids', [])
             ->assertJsonPath('overlapping_manual_ids', [$manual->id]);
 
-        // Catatan manual karyawan tidak dihapus oleh sinkron.
         $this->assertDatabaseHas('leaves', ['id' => $manual->id]);
+    }
+
+    public function test_absorbed_manual_reason_is_carried_over_when_hris_sends_none(): void
+    {
+        $user = $this->makeUser('staff@example.test');
+
+        $this->makeManualLeave($user, '2026-08-12', '2026-08-12', Leave::TYPE_CUTI, 'nikahan sepupu');
+
+        $this->syncRequest([
+            'external_id' => 'leave-req-91',
+            'email' => 'staff@example.test',
+            'type' => Leave::TYPE_CUTI,
+            'start_date' => '2026-08-12',
+            'end_date' => '2026-08-12',
+        ])->assertCreated();
+
+        $this->assertSame('nikahan sepupu', Leave::withoutGlobalScopes()->firstOrFail()->reason);
+    }
+
+    public function test_hris_reason_wins_over_the_absorbed_manual_reason(): void
+    {
+        $user = $this->makeUser('staff@example.test');
+
+        $this->makeManualLeave($user, '2026-08-12', '2026-08-12', Leave::TYPE_CUTI, 'catatan lama');
+
+        $this->syncRequest([
+            'external_id' => 'leave-req-91',
+            'email' => 'staff@example.test',
+            'type' => Leave::TYPE_CUTI,
+            'start_date' => '2026-08-12',
+            'end_date' => '2026-08-12',
+            'reason' => 'acara keluarga',
+        ])->assertCreated();
+
+        $this->assertSame('acara keluarga', Leave::withoutGlobalScopes()->firstOrFail()->reason);
+    }
+
+    public function test_manual_record_of_another_user_is_never_touched(): void
+    {
+        $user = $this->makeUser('staff@example.test');
+        $other = $this->makeUser('lain@example.test');
+
+        $otherManual = $this->makeManualLeave($other, '2026-08-12', '2026-08-12');
+
+        $this->syncRequest([
+            'external_id' => 'leave-req-91',
+            'email' => 'staff@example.test',
+            'type' => Leave::TYPE_CUTI,
+            'start_date' => '2026-08-12',
+            'end_date' => '2026-08-12',
+        ])->assertCreated()
+            ->assertJsonPath('absorbed_manual_ids', []);
+
+        $this->assertDatabaseHas('leaves', ['id' => $otherManual->id]);
+        $this->assertSame($other->id, $otherManual->fresh()->user_id);
+        $this->assertSame($user->id, Leave::withoutGlobalScopes()->where('external_id', 'leave-req-91')->value('user_id'));
     }
 
     public function test_unknown_email_is_rejected_without_creating_anything(): void
@@ -267,6 +361,24 @@ class InternalLeaveSyncApiTest extends TestCase
             2,
             Leave::withoutGlobalScopes()->where('source', Leave::SOURCE_MANUAL)->count()
         );
+    }
+
+    private function makeManualLeave(
+        User $user,
+        string $start,
+        string $end,
+        string $type = Leave::TYPE_CUTI,
+        ?string $reason = null
+    ): Leave {
+        return Leave::withoutGlobalScopes()->create([
+            'company_id' => $user->company_id,
+            'user_id' => $user->id,
+            'type' => $type,
+            'start_date' => $start,
+            'end_date' => $end,
+            'reason' => $reason,
+            'source' => Leave::SOURCE_MANUAL,
+        ]);
     }
 
     private function syncRequest(array $payload)

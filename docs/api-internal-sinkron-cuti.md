@@ -134,6 +134,7 @@ Aman untuk di-retry.
     "end_date": "2026-08-13",
     "days_count": 3
   },
+  "absorbed_manual_ids": [],
   "overlapping_manual_ids": []
 }
 ```
@@ -142,11 +143,27 @@ Aman untuk di-retry.
 
 Bentuknya sama, `created: false`.
 
-`overlapping_manual_ids` berisi ID catatan yang sebelumnya **diisi manual** oleh
-karyawan pada rentang yang beririsan. Sinkron **tidak** menghapusnya — itu data milik
-karyawan, bukan milik proses ini. Isi array ini cuma penanda buat HRD kalau mau
-merapikan. Tampilan Daily sendiri tidak rusak karena duplikat: grid bulanan
-memetakan per tanggal, jadi satu hari tetap satu penanda.
+### Catatan manual yang beririsan
+
+Karyawan bisa sudah mencatat sendiri hari yang sama lewat halaman Cuti sebelum
+pengajuannya di-ACC. Supaya halaman Cuti tidak tampak dobel, sinkron memilah dua
+kemungkinan:
+
+| Kondisi catatan manual | Perlakuan | Field response |
+|---|---|---|
+| Seluruh rentangnya tercakup rentang HRIS | **dihapus** — duplikat, harinya tetap terjamin baris HRIS | `absorbed_manual_ids` |
+| Ada tanggal di luar rentang HRIS | dibiarkan apa adanya | `overlapping_manual_ids` |
+
+Yang menonjol keluar sengaja tidak disentuh: pada tanggal itu tidak ada baris HRIS
+yang menggantikannya, jadi menghapusnya akan diam-diam mencabut pengecualian
+"belum lapor" untuk hari yang tidak pernah diputuskan HRIS.
+
+Kalau baris HRIS tidak membawa `reason` sementara catatan manual yang diserap punya,
+keterangannya dipindahkan supaya tulisan karyawan tidak hilang. `reason` dari HRIS
+selalu menang kalau keduanya ada.
+
+Efek sampingnya berguna: duplikat lama ikut bersih dengan sendirinya begitu pengajuan
+yang sama dikirim ulang — mis. lewat `php artisan daily:sync-leaves --days=60`.
 
 ### 404 — pegawai tidak punya akun Daily
 

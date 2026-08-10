@@ -72,11 +72,18 @@ class Leave extends Model
         return $this->source === self::SOURCE_ABSENSI ? 'HRIS' : 'Manual';
     }
 
-    /** Cuti/sakit yang rentangnya beririsan dengan [$start, $end]. */
+    /**
+     * Cuti/sakit yang rentangnya beririsan dengan [$start, $end].
+     *
+     * Memakai whereDate, bukan where biasa: MySQL menyimpan kolom ini sebagai DATE
+     * murni, tapi SQLite (dipakai test) menyimpannya sebagai '2026-07-13 00:00:00'.
+     * Perbandingan string apa adanya membuat rentang sehari — kasus paling umum —
+     * luput di SQLite, sehingga test bisa lolos/gagal berbeda dari produksi.
+     */
     public function scopeOverlapping(Builder $query, string $start, string $end): Builder
     {
-        return $query->where('start_date', '<=', $end)
-            ->where('end_date', '>=', $start);
+        return $query->whereDate('start_date', '<=', $end)
+            ->whereDate('end_date', '>=', $start);
     }
 
     /**

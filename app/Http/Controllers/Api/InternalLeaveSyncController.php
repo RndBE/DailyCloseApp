@@ -72,14 +72,41 @@ class InternalLeaveSyncController extends Controller
             'reason' => $data['reason'] ?? null,
         ])->save();
 
-        // Catatan manual yang beririsan tidak dihapus — data karyawan bukan milik
-        // sinkron ini. Cukup dilaporkan supaya HRIS/HRD bisa merapikan bila perlu.
-        $overlappingManual = Leave::withoutGlobalScopes()
+        // Catatan manual yang beririsan dipisah dua.
+        //
+        // Yang SELURUH rentangnya tercakup baris HRIS ini dihapus: isinya duplikat dan
+        // barisnya membuat halaman Cuti tampak dobel, sementara hari-harinya tetap
+        // terjamin oleh baris HRIS yang lebih kuat (sudah di-ACC, tidak bisa dihapus
+        // karyawan). Tidak ada informasi yang hilang.
+        //
+        // Yang menonjol KELUAR rentang HRIS tidak disentuh. Di luar rentang itu tidak
+        // ada yang menggantikannya, jadi menghapusnya akan diam-diam mencabut
+        // pengecualian "belum lapor" pada tanggal yang tidak diputuskan HRIS.
+        $manual = Leave::withoutGlobalScopes()
             ->where('user_id', $user->id)
             ->where('source', Leave::SOURCE_MANUAL)
             ->overlapping($start, $end)
-            ->pluck('id')
-            ->all();
+            ->get();
+
+        [$covered, $kept] = $manual->partition(
+            fn (Leave $row) => $row->start_date->toDateString() >= $start
+                && $row->end_date->toDateString() <= $end
+        );
+
+        // Keterangan yang sudah diisi karyawan jangan ikut hilang kalau HRIS tidak
+        // mengirim alasan apa pun.
+        if (blank($leave->reason)) {
+            $inherited = $covered->first(fn (Leave $row) => filled($row->reason));
+
+            if ($inherited) {
+                $leave->reason = $inherited->reason;
+                $leave->save();
+            }
+        }
+
+        if ($covered->isNotEmpty()) {
+            Leave::withoutGlobalScopes()->whereIn('id', $covered->pluck('id'))->delete();
+        }
 
         return response()->json([
             'success' => true,
@@ -96,7 +123,10 @@ class InternalLeaveSyncController extends Controller
                 'end_date' => $end,
                 'days_count' => $leave->days_count,
             ],
-            'overlapping_manual_ids' => $overlappingManual,
+            // Dihapus karena duplikat penuh.
+            'absorbed_manual_ids' => $covered->pluck('id')->values()->all(),
+            // Beririsan tapi sengaja dibiarkan karena keluar dari rentang HRIS.
+            'overlapping_manual_ids' => $kept->pluck('id')->values()->all(),
         ], $created ? 201 : 200);
     }
 
