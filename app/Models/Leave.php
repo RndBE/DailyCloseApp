@@ -21,6 +21,12 @@ class Leave extends Model
         self::TYPE_SAKIT => 'Sakit',
     ];
 
+    /** Dicatat sendiri oleh karyawan lewat halaman Cuti. */
+    public const SOURCE_MANUAL = 'manual';
+
+    /** Hasil sinkron pengajuan yang sudah di-ACC di HRIS/absensi. */
+    public const SOURCE_ABSENSI = 'absensi';
+
     protected $fillable = [
         'company_id',
         'user_id',
@@ -28,6 +34,8 @@ class Leave extends Model
         'start_date',
         'end_date',
         'reason',
+        'source',
+        'external_id',
     ];
 
     protected function casts(): array
@@ -51,6 +59,17 @@ class Leave extends Model
     public function getDaysCountAttribute(): int
     {
         return $this->start_date->diffInDays($this->end_date) + 1;
+    }
+
+    /** Baris hasil sinkron HRIS — tidak boleh diubah/dihapus dari sisi Daily. */
+    public function isSynced(): bool
+    {
+        return $this->source !== self::SOURCE_MANUAL;
+    }
+
+    public function getSourceLabelAttribute(): string
+    {
+        return $this->source === self::SOURCE_ABSENSI ? 'HRIS' : 'Manual';
     }
 
     /** Cuti/sakit yang rentangnya beririsan dengan [$start, $end]. */

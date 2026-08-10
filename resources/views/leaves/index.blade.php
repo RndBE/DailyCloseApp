@@ -10,6 +10,7 @@
         </h2>
         <p class="text-muted mb-0 small">
             Catat hari cuti atau sakit Anda. Hari yang dicatat di sini tidak akan dihitung sebagai laporan yang belum dikirim.
+            Pengajuan yang sudah di-ACC di HRIS masuk ke daftar ini secara otomatis.
         </p>
     </div>
     <a href="{{ route('daily-reports.mine') }}" class="btn btn-outline-secondary btn-sm">
@@ -76,8 +77,9 @@
                 <tr>
                     <th style="width:50px" class="text-center">#</th>
                     <th style="width:120px">Jenis</th>
-                    <th style="width:320px">Tanggal</th>
+                    <th style="width:280px">Tanggal</th>
                     <th style="width:80px" class="text-center">Hari</th>
+                    <th style="width:90px">Sumber</th>
                     <th>Keterangan</th>
                     <th style="width:90px" class="text-end pe-3">Aksi</th>
                 </tr>
@@ -106,21 +108,37 @@
                             @endif
                         </td>
                         <td class="text-center">{{ $leave->days_count }}</td>
+                        <td>
+                            @if($leave->isSynced())
+                                <span class="badge-soft" style="background:#eef0f4;color:#495057"
+                                      title="Otomatis dari pengajuan yang sudah di-ACC di HRIS">
+                                    <i class="bi bi-arrow-repeat me-1"></i>{{ $leave->source_label }}
+                                </span>
+                            @else
+                                <span class="text-muted small">{{ $leave->source_label }}</span>
+                            @endif
+                        </td>
                         <td class="text-muted small">{{ $leave->reason ?: '—' }}</td>
                         <td class="text-end pe-3">
-                            <form method="POST" action="{{ route('leaves.destroy', $leave) }}" class="d-inline"
-                                  onsubmit="return confirm('Hapus catatan cuti/sakit ini?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
+                            @if($leave->isSynced())
+                                <span class="text-muted small" title="Pembatalan dilakukan di HRIS">
+                                    <i class="bi bi-lock"></i>
+                                </span>
+                            @else
+                                <form method="POST" action="{{ route('leaves.destroy', $leave) }}" class="d-inline"
+                                      onsubmit="return confirm('Hapus catatan cuti/sakit ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            @endif
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-5">
+                        <td colspan="7" class="text-center text-muted py-5">
                             <i class="bi bi-calendar2-x display-5 d-block mb-2 opacity-50"></i>
                             Belum ada catatan cuti/sakit.
                         </td>

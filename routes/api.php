@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\InternalLeaveSyncController;
 use App\Http\Controllers\Api\InternalMobileTokenController;
 use App\Http\Controllers\Api\InternalPayrollDailyReportController;
 use App\Http\Controllers\Api\MobileAuthController;
@@ -16,6 +17,13 @@ Route::post('/internal/mobile-token', [InternalMobileTokenController::class, 'is
     ->name('api.internal.mobile-token');
 Route::get('/internal/payroll/daily-report-late', [InternalPayrollDailyReportController::class, 'lateCounts'])
     ->name('api.internal.payroll.daily-report-late');
+
+// Cuti/sakit yang sudah di-ACC di HRIS → otomatis muncul di tampilan Daily.
+Route::post('/internal/leaves/sync', [InternalLeaveSyncController::class, 'sync'])
+    ->name('api.internal.leaves.sync');
+Route::delete('/internal/leaves/{externalId}', [InternalLeaveSyncController::class, 'revoke'])
+    ->where('externalId', '[A-Za-z0-9_.-]+')
+    ->name('api.internal.leaves.revoke');
 
 Route::prefix('mobile')->group(function () {
     Route::post('/login', [MobileAuthController::class, 'login']);

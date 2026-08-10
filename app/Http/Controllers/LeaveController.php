@@ -29,12 +29,14 @@ class LeaveController extends Controller
         // Cegah rentang yang beririsan dengan pengajuan yang sudah ada.
         $overlap = Leave::where('user_id', $user->id)
             ->overlapping($data['start_date'], $data['end_date'])
-            ->exists();
+            ->first();
 
         if ($overlap) {
             return back()
                 ->withInput()
-                ->with('error', 'Rentang tanggal beririsan dengan pengajuan cuti/sakit yang sudah ada.');
+                ->with('error', $overlap->isSynced()
+                    ? 'Rentang tanggal beririsan dengan pengajuan yang sudah di-ACC di HRIS dan sudah tercatat otomatis di sini.'
+                    : 'Rentang tanggal beririsan dengan pengajuan cuti/sakit yang sudah ada.');
         }
 
         $user->leaves()->create($data);
@@ -50,6 +52,13 @@ class LeaveController extends Controller
             $request->user()->isSuperAdmin() || $leave->user_id === $request->user()->id,
             403
         );
+
+        // Catatan dari HRIS hanya boleh dibatalkan di HRIS, supaya kedua sistem
+        // tidak berbeda isi.
+        if ($leave->isSynced()) {
+            return redirect()->route('leaves.index')
+                ->with('error', 'Catatan ini berasal dari pengajuan yang sudah di-ACC di HRIS. Pembatalannya dilakukan di HRIS, nanti otomatis hilang dari sini.');
+        }
 
         $leave->delete();
 
