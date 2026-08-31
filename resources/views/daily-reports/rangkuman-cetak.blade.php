@@ -443,7 +443,7 @@
 
                 @if($onLeave->count() > 0)
                     <div class="alert-missing" style="background:#e5f4fb; border-color:#0c6f97; color:#0c6f97">
-                        <strong>Cuti / Sakit:</strong>
+                        <strong>Cuti / Sakit / Izin:</strong>
                         {{ $onLeave->map(fn($r) => $r->user->name . ' (' . $r->leave->type_label . ')')->join(', ') }}
                     </div>
                 @endif

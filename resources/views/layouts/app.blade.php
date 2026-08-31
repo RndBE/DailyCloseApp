@@ -266,7 +266,7 @@
                     <i class="bi bi-person-lines-fill"></i> Laporan Saya
                 </a>
                 <a href="{{ route('leaves.index') }}" class="nav-link-item {{ request()->routeIs('leaves.*') ? 'active' : '' }}">
-                    <i class="bi bi-calendar-heart"></i> Cuti / Sakit
+                    <i class="bi bi-calendar-heart"></i> Cuti / Sakit / Izin
                 </a>
                 @if($hasTeam)
                     <a href="{{ route('daily-reports.index') }}" class="nav-link-item {{ request()->routeIs('daily-reports.index') ? 'active' : '' }}">

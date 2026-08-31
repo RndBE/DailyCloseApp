@@ -252,6 +252,28 @@ class InternalLeaveSyncApiTest extends TestCase
         ])->assertNotFound();
     }
 
+    public function test_full_day_izin_from_hris_is_recorded_in_daily(): void
+    {
+        $user = $this->makeUser('staff@example.test');
+
+        $this->syncRequest([
+            'external_id' => 'leave-req-95',
+            'email' => 'staff@example.test',
+            'type' => Leave::TYPE_IZIN,
+            'start_date' => '2026-08-11',
+            'end_date' => '2026-08-11',
+            'reason' => 'Keperluan keluarga',
+        ])->assertCreated()
+            ->assertJsonPath('data.type', Leave::TYPE_IZIN);
+
+        $this->assertDatabaseHas('leaves', [
+            'user_id' => $user->id,
+            'type' => Leave::TYPE_IZIN,
+            'source' => Leave::SOURCE_ABSENSI,
+            'external_id' => 'leave-req-95',
+        ]);
+    }
+
     public function test_invalid_type_is_rejected(): void
     {
         $this->makeUser('staff@example.test');

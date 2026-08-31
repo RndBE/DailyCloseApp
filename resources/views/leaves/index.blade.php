@@ -1,15 +1,15 @@
 @extends('layouts.app')
 
-@section('title', 'Cuti / Sakit')
+@section('title', 'Cuti / Sakit / Izin')
 
 @section('content')
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
     <div>
         <h2 class="h4 fw-bold mb-1">
-            <i class="bi bi-calendar-heart text-primary me-2"></i>Cuti / Sakit
+            <i class="bi bi-calendar-heart text-primary me-2"></i>Cuti / Sakit / Izin
         </h2>
         <p class="text-muted mb-0 small">
-            Catat hari cuti atau sakit Anda. Hari yang dicatat di sini tidak akan dihitung sebagai laporan yang belum dikirim.
+            Catat hari cuti, sakit, atau izin Anda. Hari yang dicatat di sini tidak akan dihitung sebagai laporan yang belum dikirim.
             Pengajuan yang sudah di-ACC di HRIS masuk ke daftar ini secara otomatis.
         </p>
     </div>
@@ -21,7 +21,7 @@
 {{-- Form ajukan --}}
 <div class="card mb-3">
     <div class="card-header py-2 px-3 d-flex align-items-center" style="background:#f0f4ff; border-bottom:2px solid #c7d7fa">
-        <span class="fw-semibold"><i class="bi bi-plus-circle me-2 text-primary"></i>Catat Cuti / Sakit</span>
+        <span class="fw-semibold"><i class="bi bi-plus-circle me-2 text-primary"></i>Catat Cuti / Sakit / Izin</span>
     </div>
     <div class="card-body">
         <form method="POST" action="{{ route('leaves.store') }}" class="row g-3">
@@ -67,7 +67,7 @@
 <div class="card">
     <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between">
         <span class="fw-semibold">
-            <i class="bi bi-list-ul me-2 text-primary"></i>Riwayat Cuti / Sakit
+            <i class="bi bi-list-ul me-2 text-primary"></i>Riwayat Cuti / Sakit / Izin
         </span>
         <span class="text-muted small">{{ $leaves->count() }} catatan</span>
     </div>
@@ -89,15 +89,9 @@
                     <tr>
                         <td class="text-center text-muted small">{{ $i + 1 }}</td>
                         <td>
-                            @if($leave->type === \App\Models\Leave::TYPE_SAKIT)
-                                <span class="badge-soft" style="background:#fdecec;color:#b02a37">
-                                    <i class="bi bi-thermometer-half me-1"></i>{{ $leave->type_label }}
-                                </span>
-                            @else
-                                <span class="badge-soft" style="background:#e5f4fb;color:#0c6f97">
-                                    <i class="bi bi-calendar-heart me-1"></i>{{ $leave->type_label }}
-                                </span>
-                            @endif
+                            <span class="badge-soft" style="background:{{ $leave->badge['bg'] }};color:{{ $leave->badge['color'] }}">
+                                <i class="bi {{ $leave->badge['icon'] }} me-1"></i>{{ $leave->type_label }}
+                            </span>
                         </td>
                         <td class="small">
                             @if($leave->start_date->isSameDay($leave->end_date))
@@ -126,7 +120,7 @@
                                 </span>
                             @else
                                 <form method="POST" action="{{ route('leaves.destroy', $leave) }}" class="d-inline"
-                                      onsubmit="return confirm('Hapus catatan cuti/sakit ini?')">
+                                      onsubmit="return confirm('Hapus catatan ketidakhadiran ini?')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -140,7 +134,7 @@
                     <tr>
                         <td colspan="7" class="text-center text-muted py-5">
                             <i class="bi bi-calendar2-x display-5 d-block mb-2 opacity-50"></i>
-                            Belum ada catatan cuti/sakit.
+                            Belum ada catatan ketidakhadiran.
                         </td>
                     </tr>
                 @endforelse

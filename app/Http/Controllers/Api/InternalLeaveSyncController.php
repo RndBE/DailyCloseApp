@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 /**
- * Sinkron cuti/sakit dari HRIS (backend_absensi) ke Daily.
+ * Sinkron cuti/sakit/izin dari HRIS (backend_absensi) ke Daily.
  *
  * HRIS memanggil `sync` saat pengajuan berubah menjadi ACC, dan `revoke`
  * saat pengajuan yang sudah ACC dibatalkan/ditolak. Baris hasil sinkron
@@ -112,8 +112,8 @@ class InternalLeaveSyncController extends Controller
             'success' => true,
             'created' => $created,
             'message' => $created
-                ? 'Cuti/sakit berhasil dicatat di Daily.'
-                : 'Cuti/sakit yang sudah ada berhasil diperbarui.',
+                ? 'Ketidakhadiran berhasil dicatat di Daily.'
+                : 'Ketidakhadiran yang sudah ada berhasil diperbarui.',
             'data' => [
                 'id' => $leave->id,
                 'external_id' => $leave->external_id,
@@ -149,8 +149,8 @@ class InternalLeaveSyncController extends Controller
             'success' => true,
             'deleted' => $deleted > 0,
             'message' => $deleted > 0
-                ? 'Catatan cuti/sakit di Daily berhasil dihapus.'
-                : 'Tidak ada catatan cuti/sakit dengan external_id tersebut.',
+                ? 'Catatan ketidakhadiran di Daily berhasil dihapus.'
+                : 'Tidak ada catatan ketidakhadiran dengan external_id tersebut.',
         ]);
     }
 

@@ -36,7 +36,7 @@ class LeaveController extends Controller
                 ->withInput()
                 ->with('error', $overlap->isSynced()
                     ? 'Rentang tanggal beririsan dengan pengajuan yang sudah di-ACC di HRIS dan sudah tercatat otomatis di sini.'
-                    : 'Rentang tanggal beririsan dengan pengajuan cuti/sakit yang sudah ada.');
+                    : 'Rentang tanggal beririsan dengan catatan ketidakhadiran yang sudah ada.');
         }
 
         $user->leaves()->create($data);
@@ -63,6 +63,6 @@ class LeaveController extends Controller
         $leave->delete();
 
         return redirect()->route('leaves.index')
-            ->with('success', 'Catatan cuti/sakit berhasil dihapus.');
+            ->with('success', 'Catatan ketidakhadiran berhasil dihapus.');
     }
 }

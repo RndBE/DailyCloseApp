@@ -1,8 +1,8 @@
-# API Internal — Sinkron Cuti/Sakit dari HRIS ke Daily
+# API Internal — Sinkron Cuti/Sakit/Izin dari HRIS ke Daily
 
-Endpoint service-to-service supaya pengajuan cuti/sakit yang **sudah di-ACC di HRIS**
-(`backend_absensi`) otomatis muncul di tampilan cuti/sakit Daily, tanpa karyawan
-perlu mencatat ulang.
+Endpoint service-to-service supaya pengajuan cuti/sakit/izin yang **sudah di-ACC di
+HRIS** (`backend_absensi`) otomatis muncul di tampilan ketidakhadiran Daily, tanpa
+karyawan perlu mencatat ulang.
 
 Arahnya **push dari HRIS ke Daily**: HRIS pemilik proses approval, Daily hanya
 menerima hasil akhirnya. Daily tidak pernah mengintip tabel `leave_requests`.
@@ -44,7 +44,7 @@ bukan diloloskan. Jangan tulis nilainya di repo, tiket, atau chat grup.
 |---|---|---|
 | `external_id` | ya | ID pengajuan di HRIS, maks 64 karakter. Pakai `leave_requests.id`. Ini kunci idempotensi. |
 | `email` | ya | Email pegawai. Tidak membedakan huruf besar/kecil. |
-| `type` | ya | Hanya `cuti` atau `sakit`. Nilai lain dijawab `422`. |
+| `type` | ya | Hanya `cuti`, `sakit`, atau `izin`. Nilai lain dijawab `422`. |
 | `start_date` | ya | `Y-m-d` |
 | `end_date` | ya | `Y-m-d`, tidak boleh sebelum `start_date` |
 | `reason` | tidak | Maks 500 karakter. Kirim ringkasannya saja — jangan detail diagnosis medis. |
@@ -62,9 +62,10 @@ bukan diloloskan. Jangan tulis nilainya di repo, tiket, atau chat grup.
 
 ## Pemetaan jenis izin HRIS → `type` Daily
 
-Daily hanya kenal dua jenis, karena fungsinya cuma satu: menandai hari yang **tidak
-wajib lapor harian**. Jadi yang dikirim hanya izin yang benar-benar membuat orangnya
-tidak bekerja sehari penuh.
+Daily kenal tiga jenis, tapi fungsinya tetap cuma satu: menandai hari yang **tidak
+wajib lapor harian**. Jadi yang dikirim hanya pengajuan yang benar-benar membuat
+orangnya tidak bekerja sehari penuh. Jenisnya sendiri hanya memengaruhi label dan
+warna badge, bukan perhitungan.
 
 Daftar berikut disamakan dengan isi tabel `leave_types` yang benar-benar ada di DB
 HRIS (bukan dari seeder — nama di seeder sudah tidak sama dengan data nyata):
@@ -85,8 +86,24 @@ Dua baris terakhir itu penting. Izin parsial dan WFH tetap dihitung hadir dan or
 tetap kerja, jadi **tetap wajib mengisi laporan harian**. Kalau ikut dikirim, mereka
 hilang dari daftar "belum lapor" padahal seharusnya masih ditagih.
 
-Kalau nanti ada leave type "Izin Pulang Cepat" (belum ada di DB sekarang), perlakuannya
-sama seperti Izin Datang Terlambat: jangan dikirim.
+### Kapan pakai `izin`
+
+`izin` untuk ketidakhadiran **sehari penuh** yang bukan cuti berbayar dan bukan sakit —
+mis. leave type bernama "Izin", "Izin Tidak Masuk", atau "Izin Keperluan Pribadi".
+Orangnya tidak berangkat sama sekali, jadi memang tidak wajib lapor.
+
+Yang menentukan pilihan bukan kata "izin" pada namanya, tapi apakah orangnya masuk
+kerja hari itu:
+
+| Sifat pengajuan | Kirim |
+|---|---|
+| Tidak berangkat sehari penuh | `izin` |
+| Masih berangkat, cuma jamnya bergeser (Izin Datang Terlambat, Izin Pulang Cepat) | **jangan dikirim** |
+| Kerja dari rumah (WFH) | **jangan dikirim** |
+
+Jadi "Izin Datang Terlambat" tetap **jangan dikirim** meski sekarang `izin` sudah
+diterima Daily — orangnya tetap kerja dan tetap wajib mengisi laporan harian. Sama
+juga untuk "Izin Pulang Cepat" kalau nanti ditambahkan.
 
 Kalau nanti HRIS menambah leave type baru, defaultnya **jangan dikirim** sampai
 disepakati masuk kolom mana. Aman by default.
@@ -124,7 +141,7 @@ Aman untuk di-retry.
 {
   "success": true,
   "created": true,
-  "message": "Cuti/sakit berhasil dicatat di Daily.",
+  "message": "Ketidakhadiran berhasil dicatat di Daily.",
   "data": {
     "id": 148,
     "external_id": "91",
@@ -180,7 +197,7 @@ Daily. Cukup dicatat di log, jangan di-retry terus-menerus.
 ### 422 — payload tidak valid
 
 Format validasi Laravel biasa (`errors` per field). Penyebab paling umum: `type` bukan
-`cuti`/`sakit` — biasanya karena leave type baru belum dipetakan.
+`cuti`/`sakit`/`izin` — biasanya karena leave type baru belum dipetakan.
 
 ### 403 — secret salah atau tidak dikirim
 

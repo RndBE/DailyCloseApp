@@ -124,7 +124,7 @@
         <span class="badge-soft bg-soft-success"><i class="bi bi-check-circle me-1"></i>Sudah kirim: {{ $summary['submitted'] }}</span>
         <span class="badge-soft bg-soft-warning"><i class="bi bi-exclamation-circle me-1"></i>Belum kirim: {{ $summary['missing'] }}</span>
         @if(($summary['leave'] ?? 0) > 0)
-            <span class="badge-soft bg-soft-info"><i class="bi bi-calendar-heart me-1"></i>Cuti/Sakit: {{ $summary['leave'] }}</span>
+            <span class="badge-soft bg-soft-info"><i class="bi bi-calendar-heart me-1"></i>Cuti/Sakit/Izin: {{ $summary['leave'] }}</span>
         @endif
     </div>
 @endunless
@@ -239,11 +239,9 @@
                                         </a>
                                     @endif
                                 @elseif($leave)
-                                    @if($leave->type === \App\Models\Leave::TYPE_SAKIT)
-                                        <span class="badge-soft bg-soft-danger"><i class="bi bi-thermometer-half"></i> {{ $leave->type_label }}</span>
-                                    @else
-                                        <span class="badge-soft bg-soft-info"><i class="bi bi-calendar-heart"></i> {{ $leave->type_label }}</span>
-                                    @endif
+                                    <span class="badge-soft" style="background:{{ $leave->badge['bg'] }};color:{{ $leave->badge['color'] }}">
+                                        <i class="bi {{ $leave->badge['icon'] }}"></i> {{ $leave->type_label }}
+                                    </span>
                                 @else
                                     <span class="badge-soft bg-soft-warning"><i class="bi bi-exclamation-circle"></i> Belum Kirim</span>
                                 @endif

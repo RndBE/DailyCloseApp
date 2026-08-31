@@ -130,7 +130,7 @@
                 <th>Total Anggota</th>
                 <th>Total Laporan Terkirim</th>
                 <th>Total Lembur</th>
-                <th>Cuti / Sakit</th>
+                <th>Cuti / Sakit / Izin</th>
                 <th>Butuh Bantuan</th>
                 <th>Sanksi Terlambat</th>
             </tr>
@@ -163,7 +163,7 @@
                         <th class="left" style="width:70px">Level</th>
                         <th style="width:110px">Laporan Terkirim</th>
                         <th style="width:70px">Lembur</th>
-                        <th style="width:70px">Cuti / Sakit</th>
+                        <th style="width:70px">Cuti / Sakit / Izin</th>
                         <th style="width:80px">Butuh Bantuan</th>
                         <th style="width:70px">Sanksi</th>
                     </tr>

@@ -256,11 +256,11 @@ $splitText = fn (string $text): array => \App\Support\ReportText::splitBullets($
                 </div>
             @endif
 
-            {{-- Cuti / sakit --}}
+            {{-- Cuti / sakit / izin --}}
             @if($onLeave->count() > 0)
                 <div class="mb-4 p-3 rounded" style="background:#e5f4fb; border-left:3px solid #0c6f97">
                     <span class="fw-semibold" style="color:#0c6f97">
-                        <i class="bi bi-calendar-heart me-1"></i>Cuti / Sakit:
+                        <i class="bi bi-calendar-heart me-1"></i>Cuti / Sakit / Izin:
                     </span>
                     <span class="ms-1" style="color:#0c6f97">
                         {{ $onLeave->map(fn($r) => $r->user->name . ' (' . $r->leave->type_label . ')')->join(', ') }}

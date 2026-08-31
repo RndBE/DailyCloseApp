@@ -15,10 +15,26 @@ class Leave extends Model
 
     public const TYPE_CUTI  = 'cuti';
     public const TYPE_SAKIT = 'sakit';
+    public const TYPE_IZIN  = 'izin';
 
     public const TYPES = [
         self::TYPE_CUTI  => 'Cuti',
         self::TYPE_SAKIT => 'Sakit',
+        self::TYPE_IZIN  => 'Izin',
+    ];
+
+    /**
+     * Warna dan ikon badge per jenis.
+     *
+     * Ditaruh di model, bukan di masing-masing view: sebelumnya setiap tampilan
+     * memakai percabangan biner "sakit atau bukan", sehingga jenis ketiga diam-diam
+     * ikut memakai gaya cuti. Satu sumber membuat penambahan jenis berikutnya cukup
+     * disentuh di sini.
+     */
+    private const BADGES = [
+        self::TYPE_CUTI  => ['bg' => '#e5f4fb', 'color' => '#0c6f97', 'icon' => 'bi-calendar-heart'],
+        self::TYPE_SAKIT => ['bg' => '#fdecec', 'color' => '#b02a37', 'icon' => 'bi-thermometer-half'],
+        self::TYPE_IZIN  => ['bg' => '#f3eefc', 'color' => '#6b46c1', 'icon' => 'bi-envelope-paper'],
     ];
 
     /** Dicatat sendiri oleh karyawan lewat halaman Cuti. */
@@ -54,6 +70,12 @@ class Leave extends Model
     public function getTypeLabelAttribute(): string
     {
         return self::TYPES[$this->type] ?? $this->type;
+    }
+
+    /** @return array{bg: string, color: string, icon: string} */
+    public function getBadgeAttribute(): array
+    {
+        return self::BADGES[$this->type] ?? self::BADGES[self::TYPE_CUTI];
     }
 
     public function getDaysCountAttribute(): int

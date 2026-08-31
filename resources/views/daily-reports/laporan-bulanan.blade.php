@@ -47,7 +47,7 @@
         ['val' => $totalStats['members'],   'label' => 'Total Anggota',   'bg' => '#f1f5f9', 'color' => '#1e293b'],
         ['val' => $totalStats['submitted'],  'label' => 'Total Laporan',   'bg' => '#e7f7ee', 'color' => '#157347'],
         ['val' => $totalStats['overtime'],   'label' => 'Total Lembur',    'bg' => '#fff5e6', 'color' => '#b15c00'],
-        ['val' => $totalStats['leave'],      'label' => 'Cuti / Sakit',    'bg' => '#e5f4fb', 'color' => '#0c6f97'],
+        ['val' => $totalStats['leave'],      'label' => 'Cuti / Sakit / Izin', 'bg' => '#e5f4fb', 'color' => '#0c6f97'],
         ['val' => $totalStats['need_help'],  'label' => 'Butuh Bantuan',   'bg' => '#fef2f2', 'color' => '#b02a37'],
         ['val' => $totalStats['late'],       'label' => 'Sanksi',          'bg' => '#fef2f2', 'color' => '#b02a37'],
     ] as $s)
@@ -261,9 +261,10 @@ $splitCell = function(string $text): array {
                                         @endphp
                                         @php
                                             $isLeaveDay = $leave && ! $r && ! $isHoliday;
-                                            $isSakit    = $leave && $leave->type === \App\Models\Leave::TYPE_SAKIT;
-                                            $leaveBg    = $isSakit ? '#fdecec' : '#e5f4fb';
-                                            $leaveColor = $isSakit ? '#b02a37' : '#0c6f97';
+                                            $leaveBadge = $leave?->badge;
+                                            $leaveBg    = $leaveBadge['bg'] ?? '#e5f4fb';
+                                            $leaveColor = $leaveBadge['color'] ?? '#0c6f97';
+                                            $leaveIcon  = $leaveBadge['icon'] ?? 'bi-calendar-heart';
 
                                             $trStyle = $isHoliday
                                                 ? 'background:#fef2f2'
@@ -296,7 +297,7 @@ $splitCell = function(string $text): array {
                                                 @if($leave)
                                                     <div class="mt-1">
                                                         <span class="badge" style="background:{{ $leaveColor }}; color:#fff; font-size:.68rem; font-weight:600">
-                                                            <i class="bi {{ $isSakit ? 'bi-thermometer-half' : 'bi-calendar-heart' }} me-1"></i>{{ $leave->type_label }}
+                                                            <i class="bi {{ $leaveIcon }} me-1"></i>{{ $leave->type_label }}
                                                         </span>
                                                     </div>
                                                 @endif
@@ -314,7 +315,7 @@ $splitCell = function(string $text): array {
                                                 </td>
                                             @elseif($leave && !$r)
                                                 <td colspan="6" class="text-center small fst-italic" style="color:{{ $leaveColor }}">
-                                                    <i class="bi {{ $isSakit ? 'bi-thermometer-half' : 'bi-calendar-heart' }} me-1"></i>{{ $leave->type_label }}
+                                                    <i class="bi {{ $leaveIcon }} me-1"></i>{{ $leave->type_label }}
                                                     @if($leave->reason) — {{ $leave->reason }} @endif
                                                 </td>
                                             @elseif(!$r)
