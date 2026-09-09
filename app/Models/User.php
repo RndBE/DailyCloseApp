@@ -93,6 +93,7 @@ class User extends Authenticatable
         'Manager',
         'Leader',
         'Staff',
+        'Magang',
     ];
 
     protected $fillable = [
