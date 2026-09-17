@@ -74,7 +74,7 @@ class User extends Authenticatable
         'Tax Officer',
         'Accounting',
         'Purchasing',
-        'HSE',
+        'HSE GA',
         'Helper',
         'HRD',
         'Publikasi',
