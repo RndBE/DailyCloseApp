@@ -10,9 +10,10 @@ use Illuminate\Support\Carbon;
 /**
  * Aturan sanksi laporan harian (berlaku untuk laporan mulai 1 September 2026).
  *
- * - Leader & Staff: laporan tanggal D telat bila dikirim mulai D pukul 21:00 WIB, termasuk
- *   laporan susulan di hari-hari berikutnya. Lembur yang selesai pukul 21:00 atau lebih
- *   memberi kelonggaran sampai akhir hari D.
+ * - Leader & Staff (aturan lama, sengaja dipertahankan): laporan telat bila saat dikirim
+ *   jam sudah pukul 21:00 WIB atau lebih, apa pun tanggal laporannya. Laporan susulan yang
+ *   dikirim sebelum pukul 21:00 tidak telat. Lembur yang selesai pukul 21:00 atau lebih
+ *   membebaskan laporan itu dari sanksi telat.
  * - Manager: laporan tanggal D paling lambat D+1 pukul 10:00 WIB.
  *
  * Hari kerja tanpa laporan dihitung tidak diisi setelah batasnya lewat. Telat dan tidak
@@ -44,23 +45,12 @@ class DailyReportDeadline
             : 'pukul '.self::STAFF_CUTOFF.' WIB';
     }
 
-    /**
-     * Saat terakhir laporan tanggal $reportDate masih dianggap tepat waktu.
-     * $overtimeEnd (H:i) hanya berpengaruh untuk Leader & Staff.
-     */
-    public static function deadlineFor(User $user, CarbonInterface|string $reportDate, ?string $overtimeEnd = null): Carbon
+    /** Manager: saat terakhir laporan tanggal $reportDate masih dianggap tepat waktu (D+1 10:00 WIB). */
+    public static function managerDeadlineFor(CarbonInterface|string $reportDate): Carbon
     {
-        $day = Carbon::parse(self::dateString($reportDate), self::TIMEZONE);
-
-        if ($user->level === User::LEVEL_MANAGER) {
-            return $day->addDay()->setTimeFromTimeString(self::MANAGER_DEADLINE);
-        }
-
-        if (self::overtimePastCutoff($overtimeEnd)) {
-            return $day->endOfDay();
-        }
-
-        return $day->setTimeFromTimeString(self::STAFF_CUTOFF)->subMicrosecond();
+        return Carbon::parse(self::dateString($reportDate), self::TIMEZONE)
+            ->addDay()
+            ->setTimeFromTimeString(self::MANAGER_DEADLINE);
     }
 
     /**
@@ -69,7 +59,16 @@ class DailyReportDeadline
      */
     public static function isLate(User $user, CarbonInterface|string $reportDate, CarbonInterface $submittedAt, ?string $overtimeEnd = null): bool
     {
-        if (! self::appliesTo($user) || ! $submittedAt->greaterThan(self::deadlineFor($user, $reportDate, $overtimeEnd))) {
+        if (! self::appliesTo($user)) {
+            return false;
+        }
+
+        $late = $user->level === User::LEVEL_MANAGER
+            ? $submittedAt->greaterThan(self::managerDeadlineFor($reportDate))
+            : Carbon::instance($submittedAt)->setTimezone(self::TIMEZONE)->format('H:i') >= self::STAFF_CUTOFF
+                && ! self::overtimePastCutoff($overtimeEnd);
+
+        if (! $late) {
             return false;
         }
 
@@ -89,7 +88,7 @@ class DailyReportDeadline
         $now = Carbon::instance($now ?? Carbon::now())->setTimezone(self::TIMEZONE);
         $due = $now->copy()->subDay()->startOfDay();
 
-        if ($user->level === User::LEVEL_MANAGER && ! $now->greaterThan(self::deadlineFor($user, $due))) {
+        if ($user->level === User::LEVEL_MANAGER && ! $now->greaterThan(self::managerDeadlineFor($due))) {
             $due->subDay();
         }
 

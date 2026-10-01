@@ -24,7 +24,7 @@ class RecalculateDailyReportLateCommandTest extends TestCase
         $sameNight = $this->makeReport($staff, '2026-09-05', '2026-09-05 21:07:00', isLate: true);
         // Staff, dikirim 21:30 tapi tersimpan tidak telat (sempat memakai aturan Manager): jadi telat.
         $wrongRule = $this->makeReport($staff, '2026-09-30', '2026-09-30 21:30:00', isLate: false);
-        // Staff, laporan susulan pagi hari enam hari kemudian: aturan lama meloloskan, sekarang telat.
+        // Staff, laporan susulan pagi hari enam hari kemudian: dikirim sebelum 21:00, tidak telat.
         $weekLate = $this->makeReport($staff, '2026-09-25', '2026-10-01 09:32:00', isLate: false);
         // Manager: dikirim malam hari itu tepat waktu, dikirim besok jam 11:00 telat.
         $managerNight = $this->makeReport($manager, '2026-09-09', '2026-09-09 21:07:00', isLate: false);
@@ -48,20 +48,20 @@ class RecalculateDailyReportLateCommandTest extends TestCase
         $this->assertFalse($weekLate->fresh()->is_late);
         $this->assertFalse($wrongRule->fresh()->is_late);
 
-        $updatedBefore = $weekLate->fresh()->updated_at->toDateTimeString();
+        $updatedBefore = $wrongRule->fresh()->updated_at->toDateTimeString();
 
         $this->artisan('daily-reports:recalculate-late', ['--from' => '2026-09-01', '--to' => '2026-09-30', '--apply' => true])
             ->assertSuccessful();
 
         $this->assertTrue($sameNight->fresh()->is_late);
         $this->assertTrue($wrongRule->fresh()->is_late);
-        $this->assertTrue($weekLate->fresh()->is_late);
+        $this->assertFalse($weekLate->fresh()->is_late);
         $this->assertFalse($managerNight->fresh()->is_late);
         $this->assertTrue($managerLate->fresh()->is_late);
         $this->assertFalse($securityLate->fresh()->is_late);
         $this->assertFalse($onLeave->fresh()->is_late);
         $this->assertFalse($august->fresh()->is_late);
-        $this->assertSame($updatedBefore, $weekLate->fresh()->updated_at->toDateTimeString());
+        $this->assertSame($updatedBefore, $wrongRule->fresh()->updated_at->toDateTimeString());
     }
 
     private function makeReport(User $user, string $date, string $submittedAt, bool $isLate): DailyReport

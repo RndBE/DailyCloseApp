@@ -117,12 +117,13 @@ class MobileDailyReportApiTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_mobile_staff_report_sent_the_next_morning_is_marked_late(): void
+    public function test_mobile_staff_catch_up_report_sent_before_nine_pm_is_not_late(): void
     {
-        // Aturan lama hanya melihat jam kirim, jadi laporan susulan pagi hari lolos.
+        // Leader & Staff: yang dilihat jam kirim, bukan tanggal laporan. Laporan 4 Jun yang
+        // baru dikirim 5 Jun pagi tidak telat (aturan lama, sengaja dipertahankan).
         Carbon::setTestNow(Carbon::parse('2026-06-05 09:00:00', 'Asia/Jakarta'));
 
-        $this->submitReport($this->makeStaffUser())->assertJsonPath('data.is_late', true);
+        $this->submitReport($this->makeStaffUser())->assertJsonPath('data.is_late', false);
 
         Carbon::setTestNow();
     }
