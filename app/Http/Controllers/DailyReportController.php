@@ -10,7 +10,6 @@ use App\Models\Leave;
 use App\Models\ReportComment;
 use App\Models\SecuritySchedule;
 use App\Models\User;
-use App\Support\DailyReportDeadline;
 use App\Support\SimpleXlsx;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -784,15 +783,28 @@ class DailyReportController extends Controller
             $data['leader_help_description'] = null;
         }
 
+        $user = $request->user();
+        $data['is_late'] = false;
+
         // Tidak ada sanksi keterlambatan bila tanggal laporan adalah hari cuti/sakit.
-        $data['is_late'] = DailyReportDeadline::isLate($request->user(), $data['report_date'], now(), $data['overtime_end'] ?? null);
+        $reportDate = Carbon::parse($data['report_date'])->toDateString();
+        $onLeave = Leave::where('user_id', $user->id)
+            ->overlapping($reportDate, $reportDate)
+            ->exists();
+
+        if (! $onLeave
+            && ! $user->isSecurity()
+            && in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true)
+            && now()->hour >= 21
+            && ! $this->overtimeCoversLateCutoff($data)) {
+            $data['is_late'] = true;
+        }
 
         $report = DailyReport::create($data);
 
         $message = 'Laporan harian berhasil disimpan.';
         if ($report->is_late) {
-            $message .= ' Laporan dikirim melewati batas '.DailyReportDeadline::describe($request->user())
-                .' — Anda mendapat sanksi keterlambatan.';
+            $message .= ' Laporan dikirim setelah pukul 21:00 — Anda mendapat sanksi keterlambatan.';
         }
 
         return redirect()->route('daily-reports.show', $report)
@@ -814,6 +826,25 @@ class DailyReportController extends Controller
         }
 
         return view('daily-reports.show', ['report' => $dailyReport]);
+    }
+
+    private function overtimeCoversLateCutoff(array $data): bool
+    {
+        if (! filter_var($data['overtime_status'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            return false;
+        }
+
+        $overtimeEnd = $data['overtime_end'] ?? null;
+        if (! $overtimeEnd) {
+            return false;
+        }
+
+        try {
+            return Carbon::createFromFormat('H:i', substr((string) $overtimeEnd, 0, 5))
+                ->greaterThanOrEqualTo(Carbon::createFromTime(21, 0));
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**

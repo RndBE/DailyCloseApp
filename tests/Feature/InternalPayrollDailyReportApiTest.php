@@ -100,44 +100,14 @@ class InternalPayrollDailyReportApiTest extends TestCase
             ->assertJsonPath('data.0.late_days', 0);
     }
 
-    public function test_manager_kena_sanksi_bolong(): void
+    public function test_manager_tidak_kena_sanksi_bolong(): void
     {
         $user = $this->makeUser('manager@example.test');
         $user->forceFill(['level' => User::LEVEL_MANAGER])->save();
 
-        // 1-4 dan 7-9 Sep hari kerja tanpa laporan.
         $this->lateCounts('2026-09-01', '2026-09-09', ['manager@example.test'])
             ->assertOk()
-            ->assertJsonPath('data.0.missing_days', 7)
-            ->assertJsonPath('data.0.late_days', 7);
-    }
-
-    public function test_manager_hari_kemarin_belum_bolong_sebelum_batas_jam_sepuluh(): void
-    {
-        $user = $this->makeUser('manager@example.test');
-        $user->forceFill(['level' => User::LEVEL_MANAGER])->save();
-
-        // Laporan Rabu 9 Sep milik Manager masih boleh dikirim sampai Kamis 10 Sep pukul 10:00 WIB.
-        $this->travelTo(Carbon::parse('2026-09-10 09:59:00', 'Asia/Jakarta'));
-        $this->lateCounts('2026-09-09', '2026-09-09', ['manager@example.test'])
-            ->assertOk()
             ->assertJsonPath('data.0.missing_days', 0);
-
-        $this->travelTo(Carbon::parse('2026-09-10 10:01:00', 'Asia/Jakarta'));
-        $this->lateCounts('2026-09-09', '2026-09-09', ['manager@example.test'])
-            ->assertOk()
-            ->assertJsonPath('data.0.missing_dates', ['2026-09-09']);
-    }
-
-    public function test_staff_hari_kemarin_langsung_bolong_di_pagi_hari(): void
-    {
-        $this->makeUser('zaini@example.test');
-
-        // Leader & Staff memakai batas 21:00 di hari itu, jadi pagi berikutnya sudah bolong.
-        $this->travelTo(Carbon::parse('2026-09-10 08:00:00', 'Asia/Jakarta'));
-        $this->lateCounts('2026-09-09', '2026-09-09', ['zaini@example.test'])
-            ->assertOk()
-            ->assertJsonPath('data.0.missing_dates', ['2026-09-09']);
     }
 
     public function test_hari_sebelum_akun_dibuat_tidak_dihitung(): void

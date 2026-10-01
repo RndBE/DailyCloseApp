@@ -7,7 +7,6 @@ use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\User;
 use App\Support\CompanyContext;
-use App\Support\DailyReportDeadline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -65,6 +64,9 @@ class InternalPayrollDailyReportController extends Controller
             ])
             ->get(['id', 'email', 'level', 'work_schedule', 'created_at']);
 
+        // Hari bolong hanya dihitung sampai kemarin — hari berjalan belum jatuh tempo.
+        $missingEnd = $end->copy()->min(Carbon::yesterday());
+
         $holidays = [];
         foreach (Holiday::query()->whereBetween('date', [$start->toDateString(), $endBound])->get(['date']) as $holiday) {
             $holidays[$holiday->date->toDateString()] = true;
@@ -76,11 +78,7 @@ class InternalPayrollDailyReportController extends Controller
             $end->toDateString()
         );
 
-        $sanctions = $users->mapWithKeys(function (User $user) use ($start, $end, $holidays, $leaveMap) {
-            // Hari bolong hanya dihitung sampai tanggal yang batas kirimnya sudah lewat
-            // (Leader & Staff: kemarin; Manager: batas H+1 pukul 10:00).
-            $missingEnd = $end->copy()->min(DailyReportDeadline::lastDueDate($user));
-
+        $sanctions = $users->mapWithKeys(function (User $user) use ($start, $missingEnd, $holidays, $leaveMap) {
             $reported = [];
             $lateDates = [];
             foreach ($user->dailyReports as $report) {
@@ -148,8 +146,8 @@ class InternalPayrollDailyReportController extends Controller
         array $leaves
     ): array {
         // Sama dengan aturan sanksi keterlambatan saat laporan disimpan:
-        // Manager, Leader & Staff non-security yang terkena.
-        if (! DailyReportDeadline::appliesTo($user)) {
+        // hanya Leader & Staff non-security yang terkena.
+        if ($user->isSecurity() || ! in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true)) {
             return [];
         }
 
