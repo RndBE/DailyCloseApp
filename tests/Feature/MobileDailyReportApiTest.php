@@ -93,31 +93,18 @@ class MobileDailyReportApiTest extends TestCase
             ->assertJsonPath('data.report_date', '2026-06-04');
     }
 
-    public function test_mobile_daily_report_submitted_the_same_night_is_not_late(): void
+    public function test_mobile_staff_report_sent_before_nine_pm_is_not_late(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-04 20:59:00', 'Asia/Jakarta'));
+
+        $this->submitReport($this->makeStaffUser())->assertJsonPath('data.is_late', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_mobile_staff_report_sent_after_nine_pm_is_marked_late(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-06-04 21:15:00', 'Asia/Jakarta'));
-
-        $user = $this->makeStaffUser();
-
-        $this->submitReport($user)->assertJsonPath('data.is_late', false);
-
-        Carbon::setTestNow();
-    }
-
-    public function test_mobile_daily_report_submitted_before_ten_the_next_morning_is_not_late(): void
-    {
-        Carbon::setTestNow(Carbon::parse('2026-06-05 10:00:00', 'Asia/Jakarta'));
-
-        $user = $this->makeStaffUser();
-
-        $this->submitReport($user)->assertJsonPath('data.is_late', false);
-
-        Carbon::setTestNow();
-    }
-
-    public function test_mobile_daily_report_submitted_after_ten_the_next_morning_is_marked_late(): void
-    {
-        Carbon::setTestNow(Carbon::parse('2026-06-05 10:01:00', 'Asia/Jakarta'));
 
         $user = $this->makeStaffUser();
 
@@ -130,23 +117,65 @@ class MobileDailyReportApiTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_mobile_manager_daily_report_past_the_deadline_is_marked_late(): void
+    public function test_mobile_staff_report_sent_the_next_morning_is_marked_late(): void
     {
-        Carbon::setTestNow(Carbon::parse('2026-06-08 09:00:00', 'Asia/Jakarta'));
+        // Aturan lama hanya melihat jam kirim, jadi laporan susulan pagi hari lolos.
+        Carbon::setTestNow(Carbon::parse('2026-06-05 09:00:00', 'Asia/Jakarta'));
 
+        $this->submitReport($this->makeStaffUser())->assertJsonPath('data.is_late', true);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_mobile_staff_report_with_overtime_until_after_nine_pm_is_not_marked_late(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-04 21:45:00', 'Asia/Jakarta'));
+
+        $user = $this->makeStaffUser();
+        $payload = array_merge($this->validReportPayload(), [
+            'overtime_status' => true,
+            'overtime_start' => '17:00',
+            'overtime_end' => '21:30',
+            'work_finished_at' => '21:30',
+        ]);
+
+        $this->postJson('/api/mobile/daily-reports', $payload, [
+            'Authorization' => 'Bearer '.$this->loginAndReturnToken($user),
+        ])->assertCreated()
+            ->assertJsonPath('data.is_late', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_mobile_manager_report_is_on_time_until_ten_the_next_morning(): void
+    {
         $manager = $this->makeStaffUser([
             'level' => User::LEVEL_MANAGER,
             'position' => 'Manager',
         ]);
 
+        Carbon::setTestNow(Carbon::parse('2026-06-05 10:00:00', 'Asia/Jakarta'));
+        $this->submitReport($manager)->assertJsonPath('data.is_late', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_mobile_manager_report_after_ten_the_next_morning_is_marked_late(): void
+    {
+        $manager = $this->makeStaffUser([
+            'level' => User::LEVEL_MANAGER,
+            'position' => 'Manager',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse('2026-06-05 10:01:00', 'Asia/Jakarta'));
         $this->submitReport($manager)->assertJsonPath('data.is_late', true);
 
         Carbon::setTestNow();
     }
 
-    public function test_mobile_security_daily_report_past_the_deadline_is_not_marked_late(): void
+    public function test_mobile_security_daily_report_submitted_after_nine_pm_is_not_marked_late(): void
     {
-        Carbon::setTestNow(Carbon::parse('2026-06-06 12:00:00', 'Asia/Jakarta'));
+        Carbon::setTestNow(Carbon::parse('2026-06-04 21:15:00', 'Asia/Jakarta'));
 
         $user = $this->makeStaffUser([
             'division' => User::DIVISION_SECURITY,
@@ -154,10 +183,6 @@ class MobileDailyReportApiTest extends TestCase
         ]);
 
         $this->submitReport($user)->assertJsonPath('data.is_late', false);
-        $this->assertDatabaseHas('daily_reports', [
-            'user_id' => $user->id,
-            'is_late' => false,
-        ]);
 
         Carbon::setTestNow();
     }

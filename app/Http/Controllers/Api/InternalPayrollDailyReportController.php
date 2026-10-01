@@ -65,9 +65,6 @@ class InternalPayrollDailyReportController extends Controller
             ])
             ->get(['id', 'email', 'level', 'work_schedule', 'created_at']);
 
-        // Hari bolong hanya dihitung sampai tanggal yang batas kirimnya (H+1 pukul 10:00) sudah lewat.
-        $missingEnd = $end->copy()->min(DailyReportDeadline::lastDueDate());
-
         $holidays = [];
         foreach (Holiday::query()->whereBetween('date', [$start->toDateString(), $endBound])->get(['date']) as $holiday) {
             $holidays[$holiday->date->toDateString()] = true;
@@ -79,7 +76,11 @@ class InternalPayrollDailyReportController extends Controller
             $end->toDateString()
         );
 
-        $sanctions = $users->mapWithKeys(function (User $user) use ($start, $missingEnd, $holidays, $leaveMap) {
+        $sanctions = $users->mapWithKeys(function (User $user) use ($start, $end, $holidays, $leaveMap) {
+            // Hari bolong hanya dihitung sampai tanggal yang batas kirimnya sudah lewat
+            // (Leader & Staff: kemarin; Manager: batas H+1 pukul 10:00).
+            $missingEnd = $end->copy()->min(DailyReportDeadline::lastDueDate($user));
+
             $reported = [];
             $lateDates = [];
             foreach ($user->dailyReports as $report) {

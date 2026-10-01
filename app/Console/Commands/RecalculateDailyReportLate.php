@@ -45,7 +45,12 @@ class RecalculateDailyReportLate extends Command
                 continue;
             }
 
-            $late = DailyReportDeadline::isLate($report->user, $report->report_date, $report->created_at);
+            $late = DailyReportDeadline::isLate(
+                $report->user,
+                $report->report_date,
+                $report->created_at,
+                $report->overtime_status ? $report->overtime_end : null
+            );
             if ($late !== (bool) $report->is_late) {
                 $changes[] = [$report, $late];
             }

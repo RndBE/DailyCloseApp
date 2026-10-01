@@ -194,7 +194,7 @@ class MobileDailyReportController extends Controller
 
     private function applyLateFlag(array &$data, User $user): void
     {
-        $data['is_late'] = DailyReportDeadline::isLate($user, $data['report_date'], now());
+        $data['is_late'] = DailyReportDeadline::isLate($user, $data['report_date'], now(), $data['overtime_end'] ?? null);
     }
 
     private function formatReport(DailyReport $report): array

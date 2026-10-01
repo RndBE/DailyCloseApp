@@ -785,14 +785,14 @@ class DailyReportController extends Controller
         }
 
         // Tidak ada sanksi keterlambatan bila tanggal laporan adalah hari cuti/sakit.
-        $data['is_late'] = DailyReportDeadline::isLate($request->user(), $data['report_date'], now());
+        $data['is_late'] = DailyReportDeadline::isLate($request->user(), $data['report_date'], now(), $data['overtime_end'] ?? null);
 
         $report = DailyReport::create($data);
 
         $message = 'Laporan harian berhasil disimpan.';
         if ($report->is_late) {
-            $message .= ' Laporan dikirim melewati batas pukul '.DailyReportDeadline::DEADLINE_TIME
-                .' WIB hari berikutnya — Anda mendapat sanksi keterlambatan.';
+            $message .= ' Laporan dikirim melewati batas '.DailyReportDeadline::describe($request->user())
+                .' — Anda mendapat sanksi keterlambatan.';
         }
 
         return redirect()->route('daily-reports.show', $report)
