@@ -7,6 +7,7 @@ use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\User;
 use App\Support\CompanyContext;
+use App\Support\DailyReportDeadline;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -64,8 +65,8 @@ class InternalPayrollDailyReportController extends Controller
             ])
             ->get(['id', 'email', 'level', 'work_schedule', 'created_at']);
 
-        // Hari bolong hanya dihitung sampai kemarin — hari berjalan belum jatuh tempo.
-        $missingEnd = $end->copy()->min(Carbon::yesterday());
+        // Hari bolong hanya dihitung sampai tanggal yang batas kirimnya (H+1 pukul 10:00) sudah lewat.
+        $missingEnd = $end->copy()->min(DailyReportDeadline::lastDueDate());
 
         $holidays = [];
         foreach (Holiday::query()->whereBetween('date', [$start->toDateString(), $endBound])->get(['date']) as $holiday) {
@@ -146,8 +147,8 @@ class InternalPayrollDailyReportController extends Controller
         array $leaves
     ): array {
         // Sama dengan aturan sanksi keterlambatan saat laporan disimpan:
-        // hanya Leader & Staff non-security yang terkena.
-        if ($user->isSecurity() || ! in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true)) {
+        // Manager, Leader & Staff non-security yang terkena.
+        if (! DailyReportDeadline::appliesTo($user)) {
             return [];
         }
 

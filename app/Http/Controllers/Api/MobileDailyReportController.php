@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DailyReport;
-use App\Models\Leave;
 use App\Models\User;
+use App\Support\DailyReportDeadline;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -194,38 +194,7 @@ class MobileDailyReportController extends Controller
 
     private function applyLateFlag(array &$data, User $user): void
     {
-        $data['is_late'] = false;
-        $reportDate = Carbon::parse($data['report_date'])->toDateString();
-        $onLeave = Leave::where('user_id', $user->id)
-            ->overlapping($reportDate, $reportDate)
-            ->exists();
-
-        if (! $onLeave
-            && ! $user->isSecurity()
-            && in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true)
-            && now()->hour >= 21
-            && ! $this->overtimeCoversLateCutoff($data)) {
-            $data['is_late'] = true;
-        }
-    }
-
-    private function overtimeCoversLateCutoff(array $data): bool
-    {
-        if (! filter_var($data['overtime_status'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-            return false;
-        }
-
-        $overtimeEnd = $data['overtime_end'] ?? null;
-        if (! $overtimeEnd) {
-            return false;
-        }
-
-        try {
-            return Carbon::createFromFormat('H:i', substr((string) $overtimeEnd, 0, 5))
-                ->greaterThanOrEqualTo(Carbon::createFromTime(21, 0));
-        } catch (\Throwable) {
-            return false;
-        }
+        $data['is_late'] = DailyReportDeadline::isLate($user, $data['report_date'], now());
     }
 
     private function formatReport(DailyReport $report): array

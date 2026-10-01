@@ -93,18 +93,35 @@ class MobileDailyReportApiTest extends TestCase
             ->assertJsonPath('data.report_date', '2026-06-04');
     }
 
-    public function test_mobile_daily_report_submitted_after_nine_pm_is_marked_late(): void
+    public function test_mobile_daily_report_submitted_the_same_night_is_not_late(): void
     {
-        Carbon::setTestNow('2026-06-04 21:15:00');
+        Carbon::setTestNow(Carbon::parse('2026-06-04 21:15:00', 'Asia/Jakarta'));
 
         $user = $this->makeStaffUser();
-        $token = $this->loginAndReturnToken($user);
 
-        $this->postJson('/api/mobile/daily-reports', $this->validReportPayload(), [
-            'Authorization' => 'Bearer '.$token,
-        ])->assertCreated()
-            ->assertJsonPath('data.is_late', true);
+        $this->submitReport($user)->assertJsonPath('data.is_late', false);
 
+        Carbon::setTestNow();
+    }
+
+    public function test_mobile_daily_report_submitted_before_ten_the_next_morning_is_not_late(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-05 10:00:00', 'Asia/Jakarta'));
+
+        $user = $this->makeStaffUser();
+
+        $this->submitReport($user)->assertJsonPath('data.is_late', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_mobile_daily_report_submitted_after_ten_the_next_morning_is_marked_late(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-05 10:01:00', 'Asia/Jakarta'));
+
+        $user = $this->makeStaffUser();
+
+        $this->submitReport($user)->assertJsonPath('data.is_late', true);
         $this->assertDatabaseHas('daily_reports', [
             'user_id' => $user->id,
             'is_late' => true,
@@ -113,47 +130,30 @@ class MobileDailyReportApiTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_mobile_daily_report_with_overtime_until_after_nine_pm_is_not_marked_late(): void
+    public function test_mobile_manager_daily_report_past_the_deadline_is_marked_late(): void
     {
-        Carbon::setTestNow('2026-06-04 21:15:00');
+        Carbon::setTestNow(Carbon::parse('2026-06-08 09:00:00', 'Asia/Jakarta'));
 
-        $user = $this->makeStaffUser();
-        $token = $this->loginAndReturnToken($user);
-        $payload = array_merge($this->validReportPayload(), [
-            'overtime_status' => true,
-            'overtime_start' => '17:00',
-            'overtime_end' => '21:30',
-            'work_finished_at' => '21:30',
+        $manager = $this->makeStaffUser([
+            'level' => User::LEVEL_MANAGER,
+            'position' => 'Manager',
         ]);
 
-        $this->postJson('/api/mobile/daily-reports', $payload, [
-            'Authorization' => 'Bearer '.$token,
-        ])->assertCreated()
-            ->assertJsonPath('data.is_late', false);
-
-        $this->assertDatabaseHas('daily_reports', [
-            'user_id' => $user->id,
-            'is_late' => false,
-        ]);
+        $this->submitReport($manager)->assertJsonPath('data.is_late', true);
 
         Carbon::setTestNow();
     }
 
-    public function test_mobile_security_daily_report_submitted_after_nine_pm_is_not_marked_late(): void
+    public function test_mobile_security_daily_report_past_the_deadline_is_not_marked_late(): void
     {
-        Carbon::setTestNow('2026-06-04 21:15:00');
+        Carbon::setTestNow(Carbon::parse('2026-06-06 12:00:00', 'Asia/Jakarta'));
 
         $user = $this->makeStaffUser([
             'division' => User::DIVISION_SECURITY,
             'work_schedule' => User::SCHEDULE_SECURITY,
         ]);
-        $token = $this->loginAndReturnToken($user);
 
-        $this->postJson('/api/mobile/daily-reports', $this->validReportPayload(), [
-            'Authorization' => 'Bearer '.$token,
-        ])->assertCreated()
-            ->assertJsonPath('data.is_late', false);
-
+        $this->submitReport($user)->assertJsonPath('data.is_late', false);
         $this->assertDatabaseHas('daily_reports', [
             'user_id' => $user->id,
             'is_late' => false,
@@ -383,6 +383,13 @@ class MobileDailyReportApiTest extends TestCase
             'user_id' => $user->id,
             'company_id' => $user->company_id,
         ], $attributes));
+    }
+
+    private function submitReport(User $user)
+    {
+        return $this->postJson('/api/mobile/daily-reports', $this->validReportPayload(), [
+            'Authorization' => 'Bearer '.$this->loginAndReturnToken($user),
+        ])->assertCreated();
     }
 
     private function validReportPayload(): array
