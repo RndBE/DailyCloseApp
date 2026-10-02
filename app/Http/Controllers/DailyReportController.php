@@ -795,7 +795,8 @@ class DailyReportController extends Controller
         if (! $onLeave
             && ! $user->isSecurity()
             && in_array($user->level, [User::LEVEL_LEADER, User::LEVEL_STAFF], true)
-            && now()->hour >= 21
+            // Telat mulai 21:01:00; laporan yang dikirim di menit 21:00 (21:00:00–21:00:59) belum telat.
+            && now()->format('H:i') >= '21:01'
             && ! $this->overtimeCoversLateCutoff($data)) {
             $data['is_late'] = true;
         }

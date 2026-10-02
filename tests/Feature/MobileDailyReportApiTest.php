@@ -113,6 +113,37 @@ class MobileDailyReportApiTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_mobile_daily_report_submitted_within_the_nine_pm_minute_is_not_late(): void
+    {
+        // 21:00:00–21:00:59 masih tepat waktu; telat mulai 21:01:00.
+        Carbon::setTestNow('2026-06-04 21:00:30');
+
+        $user = $this->makeStaffUser();
+        $token = $this->loginAndReturnToken($user);
+
+        $this->postJson('/api/mobile/daily-reports', $this->validReportPayload(), [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertCreated()
+            ->assertJsonPath('data.is_late', false);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_mobile_daily_report_submitted_at_nine_oh_one_is_marked_late(): void
+    {
+        Carbon::setTestNow('2026-06-04 21:01:00');
+
+        $user = $this->makeStaffUser();
+        $token = $this->loginAndReturnToken($user);
+
+        $this->postJson('/api/mobile/daily-reports', $this->validReportPayload(), [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertCreated()
+            ->assertJsonPath('data.is_late', true);
+
+        Carbon::setTestNow();
+    }
+
     public function test_mobile_daily_report_with_overtime_until_after_nine_pm_is_not_marked_late(): void
     {
         Carbon::setTestNow('2026-06-04 21:15:00');
